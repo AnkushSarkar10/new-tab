@@ -2,6 +2,11 @@
   "use strict";
 
   const STORAGE_KEY = "albumNewTabState";
+  const DEFAULT_AUTO_PLAY_INTERVAL_SECONDS = 7;
+  const MIN_AUTO_PLAY_INTERVAL_SECONDS = 5;
+  const DEFAULT_IMAGE_TRANSITION_DURATION_MS = 1600;
+  const MIN_IMAGE_TRANSITION_DURATION_MS = 200;
+  const MAX_IMAGE_TRANSITION_DURATION_MS = 3000;
   const DEFAULT_ALBUM = {
     id: "kanye",
     name: "kanye",
@@ -55,7 +60,7 @@
   };
   const browserApi = globalThis.browser || globalThis.chrome;
   const elements = {
-    background: document.getElementById("background-image"),
+    backgroundImages: Array.from(document.querySelectorAll(".background-image")),
     albumMenuButton: document.getElementById("album-menu-button"),
     albumMenu: document.getElementById("album-menu"),
     albumMenuList: document.getElementById("album-menu-list"),
@@ -66,6 +71,11 @@
     settingsButton: document.getElementById("settings-button"),
     closeSettingsButton: document.getElementById("close-settings-button"),
     settingsPanel: document.getElementById("settings-panel"),
+    autoPlayInput: document.getElementById("auto-play-input"),
+    autoPlayIntervalField: document.getElementById("auto-play-interval-field"),
+    autoPlayIntervalInput: document.getElementById("auto-play-interval-input"),
+    imageTransitionDurationInput: document.getElementById("image-transition-duration-input"),
+    imageTransitionDurationValue: document.getElementById("image-transition-duration-value"),
     albumAdminList: document.getElementById("album-admin-list"),
     albumEditorPanel: document.getElementById("album-editor-panel"),
     closeEditorButton: document.getElementById("close-editor-button"),
@@ -79,6 +89,9 @@
   let state = null;
   let activeImage = null;
   let editingAlbumId = null;
+  let autoPlayTimerId = null;
+  let visibleBackgroundIndex = 0;
+  let imageLoadToken = 0;
 
   init();
 
@@ -86,8 +99,10 @@
     state = normalizeState(await loadState());
     await saveState();
     bindEvents();
+    applyImageTransitionDuration();
     render();
     showRandomImage();
+    syncAutoPlayTimer();
   }
 
   function bindEvents() {
@@ -96,6 +111,9 @@
     elements.shuffleButton.addEventListener("click", showRandomImage);
     elements.settingsButton.addEventListener("click", openSettings);
     elements.closeSettingsButton.addEventListener("click", closeSettings);
+    elements.autoPlayInput.addEventListener("change", handleAutoPlayInput);
+    elements.autoPlayIntervalInput.addEventListener("change", handleAutoPlayIntervalInput);
+    elements.imageTransitionDurationInput.addEventListener("input", handleImageTransitionDurationInput);
     elements.closeEditorButton.addEventListener("click", closeAlbumEditor);
     elements.albumNameInput.addEventListener("input", handleAlbumNameInput);
     elements.addUrlButton.addEventListener("click", addUrlsToEditingAlbum);
@@ -164,10 +182,12 @@
         : {
             selectedAlbumId: DEFAULT_ALBUM.id,
             lastImageByAlbum: {},
+            settings: getDefaultSettings(),
             albums: []
           };
 
     nextState.lastImageByAlbum = nextState.lastImageByAlbum || {};
+    nextState.settings = normalizeSettings(nextState.settings);
     nextState.albums = nextState.albums.filter(isValidAlbum).map((album) => ({
       ...album,
       images: album.images.filter(isValidImage)
@@ -190,6 +210,32 @@
     }
 
     return nextState;
+  }
+
+  function getDefaultSettings() {
+    return {
+      autoPlay: false,
+      autoPlayIntervalSeconds: DEFAULT_AUTO_PLAY_INTERVAL_SECONDS,
+      imageTransitionDurationMs: DEFAULT_IMAGE_TRANSITION_DURATION_MS
+    };
+  }
+
+  function normalizeSettings(settings) {
+    const defaults = getDefaultSettings();
+    const interval = Number(settings && settings.autoPlayIntervalSeconds);
+    const transitionDuration = Number(settings && settings.imageTransitionDurationMs);
+
+    return {
+      autoPlay: Boolean(settings && settings.autoPlay),
+      autoPlayIntervalSeconds:
+        Number.isFinite(interval) && interval >= MIN_AUTO_PLAY_INTERVAL_SECONDS
+          ? Math.round(interval)
+          : defaults.autoPlayIntervalSeconds,
+      imageTransitionDurationMs:
+        Number.isFinite(transitionDuration)
+          ? clamp(Math.round(transitionDuration), MIN_IMAGE_TRANSITION_DURATION_MS, MAX_IMAGE_TRANSITION_DURATION_MS)
+          : defaults.imageTransitionDurationMs
+    };
   }
 
   function isValidAlbum(album) {
@@ -215,8 +261,7 @@
   function showRandomImage() {
     const album = getSelectedAlbum();
     if (!album || album.images.length === 0) {
-      elements.background.removeAttribute("src");
-      elements.background.classList.remove("is-loaded");
+      resetBackgroundImages();
       activeImage = null;
       renderHeader();
       return;
@@ -227,11 +272,88 @@
     state.lastImageByAlbum[album.id] = nextImage.id;
     saveState();
 
-    elements.background.classList.remove("is-loaded");
-    elements.background.onload = () => elements.background.classList.add("is-loaded");
-    elements.background.src = nextImage.src;
-    elements.background.alt = album.name;
+    transitionToImage(nextImage, album.name.trim() || "Untitled album");
     renderHeader();
+  }
+
+  function transitionToImage(image, altText) {
+    const token = ++imageLoadToken;
+    const currentLayer = getVisibleBackground();
+    const nextIndex = (visibleBackgroundIndex + 1) % elements.backgroundImages.length;
+    const nextLayer = elements.backgroundImages[nextIndex];
+
+    nextLayer.onload = () => revealBackgroundImage(token, currentLayer, nextLayer, nextIndex, altText);
+    nextLayer.onerror = () => {
+      if (token === imageLoadToken) {
+        nextLayer.removeAttribute("src");
+      }
+    };
+    nextLayer.classList.remove("is-visible", "is-entering", "is-exiting");
+    nextLayer.alt = "";
+    nextLayer.setAttribute("aria-hidden", "true");
+    nextLayer.src = image.src;
+
+    if (nextLayer.complete && nextLayer.naturalWidth > 0) {
+      requestAnimationFrame(() => revealBackgroundImage(token, currentLayer, nextLayer, nextIndex, altText));
+    }
+  }
+
+  function revealBackgroundImage(token, currentLayer, nextLayer, nextIndex, altText) {
+    if (token !== imageLoadToken) {
+      return;
+    }
+
+    nextLayer.onload = null;
+    nextLayer.onerror = null;
+
+    currentLayer.classList.remove("is-visible", "is-entering");
+    currentLayer.classList.add("is-exiting");
+    currentLayer.alt = "";
+    currentLayer.setAttribute("aria-hidden", "true");
+
+    nextLayer.classList.remove("is-exiting");
+    nextLayer.classList.add("is-visible", "is-entering");
+    nextLayer.alt = altText;
+    nextLayer.removeAttribute("aria-hidden");
+    visibleBackgroundIndex = nextIndex;
+
+    window.setTimeout(() => {
+      if (token !== imageLoadToken) {
+        return;
+      }
+
+      currentLayer.classList.remove("is-exiting");
+      nextLayer.classList.remove("is-entering");
+    }, state.settings.imageTransitionDurationMs);
+  }
+
+  function resetBackgroundImages() {
+    imageLoadToken += 1;
+    elements.backgroundImages.forEach((image) => {
+      image.onload = null;
+      image.onerror = null;
+      image.removeAttribute("src");
+      image.alt = "";
+      image.setAttribute("aria-hidden", "true");
+      image.classList.remove("is-visible", "is-entering", "is-exiting");
+    });
+  }
+
+  function getVisibleBackground() {
+    return elements.backgroundImages[visibleBackgroundIndex];
+  }
+
+  function syncAutoPlayTimer() {
+    if (autoPlayTimerId !== null) {
+      clearInterval(autoPlayTimerId);
+      autoPlayTimerId = null;
+    }
+
+    if (!state.settings.autoPlay) {
+      return;
+    }
+
+    autoPlayTimerId = setInterval(showRandomImage, state.settings.autoPlayIntervalSeconds * 1000);
   }
 
   function pickImage(album) {
@@ -245,6 +367,10 @@
     const values = new Uint32Array(1);
     crypto.getRandomValues(values);
     return values[0] / 4294967296;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
   }
 
   function render() {
@@ -314,6 +440,13 @@
       return;
     }
 
+    elements.autoPlayInput.checked = state.settings.autoPlay;
+    elements.autoPlayIntervalInput.value = String(state.settings.autoPlayIntervalSeconds);
+    elements.autoPlayIntervalInput.disabled = !state.settings.autoPlay;
+    elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
+    elements.imageTransitionDurationInput.value = String(state.settings.imageTransitionDurationMs);
+    elements.imageTransitionDurationValue.textContent = `${state.settings.imageTransitionDurationMs}ms`;
+
     elements.albumAdminList.replaceChildren();
     const canDelete = state.albums.length > 1;
 
@@ -344,6 +477,44 @@
       item.append(info, deleteButton);
       elements.albumAdminList.append(item);
     });
+  }
+
+  async function handleAutoPlayInput(event) {
+    state.settings.autoPlay = event.target.checked;
+    elements.autoPlayIntervalInput.disabled = !state.settings.autoPlay;
+    elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
+    await saveState();
+    syncAutoPlayTimer();
+  }
+
+  async function handleAutoPlayIntervalInput(event) {
+    const interval = Number(event.target.value);
+    state.settings.autoPlayIntervalSeconds =
+      Number.isFinite(interval) && interval >= MIN_AUTO_PLAY_INTERVAL_SECONDS
+        ? Math.round(interval)
+        : DEFAULT_AUTO_PLAY_INTERVAL_SECONDS;
+    event.target.value = String(state.settings.autoPlayIntervalSeconds);
+    await saveState();
+    syncAutoPlayTimer();
+  }
+
+  async function handleImageTransitionDurationInput(event) {
+    const duration = Number(event.target.value);
+    state.settings.imageTransitionDurationMs =
+      Number.isFinite(duration)
+        ? clamp(Math.round(duration), MIN_IMAGE_TRANSITION_DURATION_MS, MAX_IMAGE_TRANSITION_DURATION_MS)
+        : DEFAULT_IMAGE_TRANSITION_DURATION_MS;
+    event.target.value = String(state.settings.imageTransitionDurationMs);
+    elements.imageTransitionDurationValue.textContent = `${state.settings.imageTransitionDurationMs}ms`;
+    applyImageTransitionDuration();
+    await saveState();
+  }
+
+  function applyImageTransitionDuration() {
+    document.documentElement.style.setProperty(
+      "--image-transition-duration",
+      `${state.settings.imageTransitionDurationMs}ms`
+    );
   }
 
   function getEditingAlbum() {
@@ -588,7 +759,7 @@
 
     album.name = event.target.value;
     if (album.id === state.selectedAlbumId) {
-      elements.background.alt = album.name.trim() || "Untitled album";
+      getVisibleBackground().alt = album.name.trim() || "Untitled album";
       renderHeader();
     }
     await saveState();

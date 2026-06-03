@@ -1,4 +1,5 @@
 :root {
+  --image-transition-duration: 1400ms;
   color-scheme: dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -45,22 +46,55 @@ button {
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 0;
   object-fit: cover;
   opacity: 0;
-  transform: scale(1.01);
+  transform: scale(1.035);
+  filter: brightness(0.88) saturate(0.96);
   transition:
-    opacity 220ms ease,
-    transform 800ms ease;
+    opacity var(--image-transition-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--image-transition-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    filter var(--image-transition-duration) ease;
+  will-change: opacity, transform, filter;
 }
 
-.background-image.is-loaded {
+.background-image.is-visible {
+  z-index: 1;
   opacity: 1;
   transform: scale(1);
+  filter: brightness(1) saturate(1);
+}
+
+.background-image.is-entering {
+  z-index: 2;
+  animation: image-enter var(--image-transition-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.background-image.is-exiting {
+  z-index: 1;
+  opacity: 0;
+  transform: scale(1.055) translate3d(0, -8px, 0);
+  filter: brightness(0.78) saturate(0.92);
+}
+
+@keyframes image-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.055) translate3d(0, 10px, 0);
+    filter: brightness(0.8) saturate(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+    filter: brightness(1) saturate(1);
+  }
 }
 
 .image-scrim {
   position: absolute;
   inset: 0;
+  z-index: 3;
   pointer-events: none;
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent 24%),
@@ -70,6 +104,7 @@ button {
 .topbar {
   position: absolute;
   inset: 16px 16px auto 16px;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -211,6 +246,7 @@ button {
 .settings-panel {
   position: absolute;
   inset: 0 0 0 auto;
+  z-index: 5;
   display: flex;
   width: min(420px, 100vw);
   height: 100%;
@@ -305,6 +341,67 @@ button {
 .field input:focus,
 .field textarea:focus {
   border-color: rgba(255, 255, 255, 0.48);
+}
+
+.toggle-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 54px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.toggle-field span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toggle-field strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle-field small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: #f6e7b8;
+}
+
+.interval-field[hidden] {
+  display: none;
+}
+
+.interval-field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider-field output {
+  color: #f6e7b8;
+}
+
+.slider-field input[type="range"] {
+  height: 26px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  accent-color: #f6e7b8;
 }
 
 .primary-button,

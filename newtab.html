@@ -9,6 +9,7 @@
   <body>
     <main class="stage" aria-live="polite">
       <img id="background-image" class="background-image" alt="">
+      <img id="background-image-next" class="background-image" alt="" aria-hidden="true">
       <div id="image-scrim" class="image-scrim"></div>
 
       <section class="topbar" aria-label="New tab controls">
@@ -63,6 +64,27 @@
             </svg>
           </button>
         </header>
+
+        <section class="settings-section" aria-label="General">
+          <div class="section-title">
+            <h2>general</h2>
+          </div>
+          <label class="toggle-field">
+            <span>
+              <strong>auto play</strong>
+              <small>show another image automatically</small>
+            </span>
+            <input id="auto-play-input" type="checkbox">
+          </label>
+          <label id="auto-play-interval-field" class="field interval-field" hidden>
+            <span>auto play interval (seconds)</span>
+            <input id="auto-play-interval-input" type="number" min="5" step="1" inputmode="numeric">
+          </label>
+          <label class="field slider-field">
+            <span>image transition - <output id="image-transition-duration-value">1400ms</output></span>
+            <input id="image-transition-duration-input" type="range" min="200" max="3000" step="100">
+          </label>
+        </section>
 
         <section class="settings-section" aria-label="Albums">
           <div class="section-title">
