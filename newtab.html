@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Album New Tab</title>
+    <title>new tab</title>
     <link rel="stylesheet" href="styles/newtab.css">
   </head>
   <body>
@@ -30,7 +30,7 @@
                 <path d="M12 5v14"></path>
                 <path d="M5 12h14"></path>
               </svg>
-              <span>New Album</span>
+              <span>new album</span>
             </button>
           </div>
         </div>
@@ -53,9 +53,9 @@
         </div>
       </section>
 
-      <aside id="settings-panel" class="settings-panel" aria-label="Album settings" aria-hidden="true">
+      <aside id="settings-panel" class="settings-panel" aria-label="Settings" aria-hidden="true">
         <header class="panel-header">
-          <h1>Settings</h1>
+          <h1>settings</h1>
           <button id="close-settings-button" class="icon-button" type="button" aria-label="Close settings" title="Close">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M18 6 6 18"></path>
@@ -64,21 +64,40 @@
           </button>
         </header>
 
-        <section id="editor" class="editor" aria-label="Selected album">
+        <section class="settings-section" aria-label="Albums">
           <div class="section-title">
-            <h2 id="editor-title">kanye</h2>
-            <button id="delete-album-button" class="text-button danger" type="button">Delete</button>
+            <h2>albums</h2>
           </div>
+          <p class="section-hint">add or edit albums from the album menu. You must keep at least one album.</p>
+          <div id="album-admin-list" class="album-admin-list" role="list"></div>
+        </section>
+      </aside>
 
+      <aside id="album-editor-panel" class="settings-panel" aria-label="Edit album" aria-hidden="true">
+        <header class="panel-header">
+          <h1>edit album</h1>
+          <button id="close-editor-button" class="icon-button" type="button" aria-label="Close editor" title="Close">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </header>
+
+        <section class="editor" aria-label="Album editor">
           <label class="field">
-            <span>Image URLs</span>
+            <span>album name</span>
+            <input id="album-name-input" type="text" placeholder="Album name" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>image URLs</span>
             <textarea id="image-url-input" rows="3" placeholder="https://example.com/image.jpg"></textarea>
           </label>
           <div class="row-actions">
-            <button id="add-url-button" class="secondary-button" type="button">Add URLs</button>
+            <button id="add-url-button" class="secondary-button" type="button">add URLs</button>
             <label class="file-button">
               <input id="image-file-input" type="file" accept="image/*" multiple>
-              <span>Add Files</span>
+              <span>add files</span>
             </label>
           </div>
 

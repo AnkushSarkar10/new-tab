@@ -66,8 +66,10 @@
     settingsButton: document.getElementById("settings-button"),
     closeSettingsButton: document.getElementById("close-settings-button"),
     settingsPanel: document.getElementById("settings-panel"),
-    editorTitle: document.getElementById("editor-title"),
-    deleteAlbumButton: document.getElementById("delete-album-button"),
+    albumAdminList: document.getElementById("album-admin-list"),
+    albumEditorPanel: document.getElementById("album-editor-panel"),
+    closeEditorButton: document.getElementById("close-editor-button"),
+    albumNameInput: document.getElementById("album-name-input"),
     imageUrlInput: document.getElementById("image-url-input"),
     addUrlButton: document.getElementById("add-url-button"),
     imageFileInput: document.getElementById("image-file-input"),
@@ -76,6 +78,7 @@
 
   let state = null;
   let activeImage = null;
+  let editingAlbumId = null;
 
   init();
 
@@ -93,14 +96,16 @@
     elements.shuffleButton.addEventListener("click", showRandomImage);
     elements.settingsButton.addEventListener("click", openSettings);
     elements.closeSettingsButton.addEventListener("click", closeSettings);
-    elements.deleteAlbumButton.addEventListener("click", deleteSelectedAlbum);
-    elements.addUrlButton.addEventListener("click", addUrlsToSelectedAlbum);
-    elements.imageFileInput.addEventListener("change", addFilesToSelectedAlbum);
+    elements.closeEditorButton.addEventListener("click", closeAlbumEditor);
+    elements.albumNameInput.addEventListener("input", handleAlbumNameInput);
+    elements.addUrlButton.addEventListener("click", addUrlsToEditingAlbum);
+    elements.imageFileInput.addEventListener("change", addFilesToEditingAlbum);
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeAlbumMenu();
         closeSettings();
+        closeAlbumEditor();
       }
       if (event.key.toLowerCase() === "r" && !isTextInput(event.target)) {
         showRandomImage();
@@ -245,12 +250,13 @@
   function render() {
     renderHeader();
     renderAlbumMenu();
-    renderEditor();
+    renderSettings();
+    renderAlbumEditor();
   }
 
   function renderHeader() {
     const album = getSelectedAlbum();
-    elements.albumName.textContent = album ? album.name : "No album";
+    elements.albumName.textContent = album ? album.name.trim() || "Untitled album" : "No album";
     elements.imageCount.textContent = album ? String(album.images.length) : "0";
   }
 
@@ -289,23 +295,72 @@
       count.textContent = `${album.images.length} image${album.images.length === 1 ? "" : "s"}`;
       selectButton.append(titleRow, count);
 
-      item.append(selectButton);
+      const editButton = document.createElement("button");
+      editButton.className = "icon-button album-edit";
+      editButton.type = "button";
+      editButton.title = "Edit album";
+      editButton.setAttribute("aria-label", `Edit album: ${album.name}`);
+      editButton.innerHTML =
+        '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+      editButton.addEventListener("click", () => openAlbumEditor(album.id));
+
+      item.append(selectButton, editButton);
       elements.albumMenuList.append(item);
     });
   }
 
-  function renderEditor() {
-    const album = getSelectedAlbum();
-    if (!album) {
-      elements.editorTitle.textContent = "No album";
-      elements.deleteAlbumButton.disabled = true;
-      elements.imageList.replaceChildren();
+  function renderSettings() {
+    if (!elements.albumAdminList) {
       return;
     }
 
-    elements.editorTitle.textContent = album.name;
-    elements.deleteAlbumButton.disabled = state.albums.length <= 1;
+    elements.albumAdminList.replaceChildren();
+    const canDelete = state.albums.length > 1;
+
+    state.albums.forEach((album) => {
+      const item = document.createElement("div");
+      item.className = "album-admin-item";
+      item.setAttribute("role", "listitem");
+
+      const info = document.createElement("div");
+      info.className = "album-admin-info";
+      const name = document.createElement("strong");
+      name.textContent = album.name.trim() || "Untitled album";
+      const meta = document.createElement("span");
+      const imageText = `${album.images.length} image${album.images.length === 1 ? "" : "s"}`;
+      meta.textContent = album.id === state.selectedAlbumId ? `${imageText} · active` : imageText;
+      info.append(name, meta);
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "icon-button album-admin-delete";
+      deleteButton.type = "button";
+      deleteButton.disabled = !canDelete;
+      deleteButton.title = canDelete ? "Delete album" : "You must keep at least one album";
+      deleteButton.setAttribute("aria-label", `Delete album: ${name.textContent}`);
+      deleteButton.innerHTML =
+        '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>';
+      deleteButton.addEventListener("click", () => deleteAlbum(album.id));
+
+      item.append(info, deleteButton);
+      elements.albumAdminList.append(item);
+    });
+  }
+
+  function getEditingAlbum() {
+    return state.albums.find((album) => album.id === editingAlbumId) || null;
+  }
+
+  function renderAlbumEditor() {
+    const album = getEditingAlbum();
     elements.imageList.replaceChildren();
+
+    if (!album) {
+      return;
+    }
+
+    if (document.activeElement !== elements.albumNameInput) {
+      elements.albumNameInput.value = album.name;
+    }
 
     if (album.images.length === 0) {
       const empty = document.createElement("p");
@@ -345,40 +400,57 @@
   }
 
   async function createAlbumFromMenu() {
-    const name = window.prompt("Album name")?.trim();
-    if (!name) {
-      return;
-    }
-
     const album = {
       id: `album-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      name,
+      name: "New album",
       images: []
     };
     state.albums.push(album);
     state.selectedAlbumId = album.id;
     await saveState();
-    closeAlbumMenu();
     render();
     showRandomImage();
+    openAlbumEditor(album.id);
   }
 
-  async function deleteSelectedAlbum() {
-    const album = getSelectedAlbum();
-    if (!album || state.albums.length <= 1) {
+  async function deleteAlbum(albumId) {
+    if (state.albums.length <= 1) {
       return;
     }
 
-    state.albums = state.albums.filter((item) => item.id !== album.id);
-    delete state.lastImageByAlbum[album.id];
-    state.selectedAlbumId = state.albums[0].id;
+    const album = state.albums.find((item) => item.id === albumId);
+    if (!album) {
+      return;
+    }
+
+    const displayName = album.name.trim() || "Untitled album";
+    if (!window.confirm(`Delete album "${displayName}"? This can't be undone.`)) {
+      return;
+    }
+
+    const wasSelected = state.selectedAlbumId === albumId;
+    state.albums = state.albums.filter((item) => item.id !== albumId);
+    delete state.lastImageByAlbum[albumId];
+
+    if (editingAlbumId === albumId) {
+      editingAlbumId = null;
+      elements.albumEditorPanel.classList.remove("is-open");
+      elements.albumEditorPanel.setAttribute("aria-hidden", "true");
+    }
+
+    if (wasSelected) {
+      state.selectedAlbumId = state.albums[0].id;
+    }
+
     await saveState();
     render();
-    showRandomImage();
+    if (wasSelected) {
+      showRandomImage();
+    }
   }
 
-  async function addUrlsToSelectedAlbum() {
-    const album = getSelectedAlbum();
+  async function addUrlsToEditingAlbum() {
+    const album = getEditingAlbum();
     if (!album) {
       return;
     }
@@ -399,14 +471,15 @@
     elements.imageUrlInput.value = "";
     await saveState();
     render();
-    if (!activeImage) {
+    if (album.id === state.selectedAlbumId && !activeImage) {
       showRandomImage();
     }
   }
 
-  async function addFilesToSelectedAlbum(event) {
-    const album = getSelectedAlbum();
+  async function addFilesToEditingAlbum(event) {
+    const album = getEditingAlbum();
     if (!album) {
+      event.target.value = "";
       return;
     }
 
@@ -416,7 +489,7 @@
     elements.imageFileInput.value = "";
     await saveState();
     render();
-    if (!activeImage) {
+    if (album.id === state.selectedAlbumId && !activeImage) {
       showRandomImage();
     }
   }
@@ -463,6 +536,8 @@
 
   function openSettings() {
     closeAlbumMenu();
+    closeAlbumEditor();
+    renderSettings();
     elements.settingsPanel.classList.add("is-open");
     elements.settingsPanel.setAttribute("aria-hidden", "false");
   }
@@ -470,6 +545,53 @@
   function closeSettings() {
     elements.settingsPanel.classList.remove("is-open");
     elements.settingsPanel.setAttribute("aria-hidden", "true");
+  }
+
+  function openAlbumEditor(albumId) {
+    const album = state.albums.find((item) => item.id === albumId);
+    if (!album) {
+      return;
+    }
+
+    editingAlbumId = albumId;
+    closeAlbumMenu();
+    closeSettings();
+    renderAlbumEditor();
+    elements.albumEditorPanel.classList.add("is-open");
+    elements.albumEditorPanel.setAttribute("aria-hidden", "false");
+    elements.albumNameInput.focus();
+    elements.albumNameInput.select();
+  }
+
+  function closeAlbumEditor() {
+    const album = getEditingAlbum();
+    if (album && !album.name.trim()) {
+      album.name = "Untitled album";
+      saveState();
+    }
+
+    const wasEditing = editingAlbumId !== null;
+    editingAlbumId = null;
+    elements.albumEditorPanel.classList.remove("is-open");
+    elements.albumEditorPanel.setAttribute("aria-hidden", "true");
+
+    if (wasEditing) {
+      render();
+    }
+  }
+
+  async function handleAlbumNameInput(event) {
+    const album = getEditingAlbum();
+    if (!album) {
+      return;
+    }
+
+    album.name = event.target.value;
+    if (album.id === state.selectedAlbumId) {
+      elements.background.alt = album.name.trim() || "Untitled album";
+      renderHeader();
+    }
+    await saveState();
   }
 
   function toggleAlbumMenu() {

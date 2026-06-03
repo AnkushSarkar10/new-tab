@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "Album New Tab",
+  "name": "new tab",
   "version": "0.1.0",
   "description": "Replace Firefox's new tab page with a random fullscreen image from the selected album.",
   "permissions": ["storage"],
