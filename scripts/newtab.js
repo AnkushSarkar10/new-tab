@@ -274,11 +274,20 @@
         showRandomImage();
       });
 
+      const titleRow = document.createElement("div");
+      titleRow.className = "album-title-row";
       const title = document.createElement("strong");
       title.textContent = album.name;
+      titleRow.append(title);
+      if (album.id === state.selectedAlbumId) {
+        const activeBadge = document.createElement("span");
+        activeBadge.className = "album-active-badge";
+        activeBadge.textContent = "(active)";
+        titleRow.append(activeBadge);
+      }
       const count = document.createElement("span");
       count.textContent = `${album.images.length} image${album.images.length === 1 ? "" : "s"}`;
-      selectButton.append(title, count);
+      selectButton.append(titleRow, count);
 
       item.append(selectButton);
       elements.albumMenuList.append(item);

@@ -1,6 +1,6 @@
 # new tab
 
-Firefox new-tab replacement that shows a random fullscreen image from the selected album.
+firefox new-tab replacement that shows a random fullscreen image from the selected album.
 
 ## load in Firefox
 
