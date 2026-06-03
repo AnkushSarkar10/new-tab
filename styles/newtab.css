@@ -1,0 +1,484 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #050607;
+  color: #f7f4ef;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+.stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(245, 240, 222, 0.08), transparent 34%),
+    #050607;
+}
+
+.background-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.01);
+  transition:
+    opacity 220ms ease,
+    transform 800ms ease;
+}
+
+.background-image.is-loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.image-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent 24%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.42), transparent 28%);
+}
+
+.topbar {
+  position: absolute;
+  inset: 16px 16px auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  pointer-events: none;
+}
+
+.album-menu-wrap,
+.control-group {
+  pointer-events: auto;
+}
+
+.album-chip,
+.control-group {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(12, 12, 12, 0.46);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.album-menu-wrap {
+  position: relative;
+  max-width: min(58vw, 520px);
+}
+
+.album-chip {
+  max-width: 100%;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #f7f4ef;
+  cursor: pointer;
+}
+
+.album-chip:hover,
+.album-chip:focus-visible {
+  background: rgba(20, 20, 20, 0.62);
+  outline: none;
+}
+
+.album-chip svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#album-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#image-count {
+  display: inline-grid;
+  min-width: 28px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.control-group {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.album-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: none;
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(430px, calc(100vh - 86px));
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(16, 17, 18, 0.92);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+  overflow-y: auto;
+}
+
+.album-menu.is-open {
+  display: grid;
+  gap: 8px;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: #f7f4ef;
+  cursor: pointer;
+}
+
+.control-group .icon-button {
+  border-radius: 0;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.settings-panel {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  width: min(420px, 100vw);
+  height: 100%;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(16, 17, 18, 0.9);
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(20px);
+  transform: translateX(102%);
+  transition: transform 180ms ease;
+  overflow-y: auto;
+}
+
+.settings-panel.is-open {
+  transform: translateX(0);
+}
+
+.panel-header,
+.section-title,
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-header h1,
+.section-title h2 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-header h1 {
+  font-size: 22px;
+}
+
+.section-title h2 {
+  font-size: 16px;
+}
+
+.editor {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  outline: none;
+}
+
+.field input {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.field textarea {
+  min-height: 86px;
+  resize: vertical;
+  padding: 10px 12px;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: rgba(255, 255, 255, 0.48);
+}
+
+.primary-button,
+.secondary-button,
+.text-button,
+.file-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primary-button {
+  background: #f6e7b8;
+  color: #111;
+}
+
+.secondary-button,
+.file-button {
+  flex: 1 1 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.text-button {
+  min-height: 34px;
+  padding: 0 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.danger {
+  color: #ffb4a9;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.file-button:hover,
+.text-button:hover,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.file-button:focus-within,
+.text-button:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.album-menu-list,
+.image-list {
+  display: grid;
+  gap: 8px;
+}
+
+.album-item,
+.image-item {
+  display: grid;
+  min-height: 46px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.album-item {
+  padding: 8px;
+}
+
+.album-select {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.album-menu .album-select {
+  width: 100%;
+}
+
+.album-select:hover,
+.album-select:focus-visible,
+.album-select.is-selected {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.album-select strong,
+.album-select span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-select strong {
+  font-size: 14px;
+}
+
+.album-select span {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 12px;
+}
+
+.new-album-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: #f6e7b8;
+  color: #111;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.new-album-button:hover,
+.new-album-button:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.new-album-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-item {
+  grid-template-columns: 54px 1fr auto;
+  padding: 6px;
+}
+
+.image-thumb {
+  width: 54px;
+  height: 36px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.image-label {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 14px 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    inset: 10px 10px auto 10px;
+  }
+
+  .album-chip {
+    max-width: 100%;
+  }
+
+  .album-menu-wrap {
+    max-width: calc(100vw - 120px);
+  }
+
+  .settings-panel {
+    padding: 14px;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "Album New Tab",
+  "version": "0.1.0",
+  "description": "Replace Firefox's new tab page with a random fullscreen image from the selected album.",
+  "permissions": ["storage"],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "album-new-tab@local"
+    }
+  }
+}
