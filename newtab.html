@@ -8,6 +8,15 @@
   </head>
   <body>
     <main class="stage" aria-live="polite">
+      <iframe
+        id="website-background"
+        class="website-background"
+        title="Website background"
+        aria-hidden="true"
+        tabindex="-1"
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-same-origin"
+      ></iframe>
       <img id="background-image" class="background-image" alt="">
       <img id="background-image-next" class="background-image" alt="" aria-hidden="true">
       <div id="image-scrim" class="image-scrim"></div>
@@ -69,6 +78,10 @@
           <div class="section-title">
             <h2>general</h2>
           </div>
+          <label id="website-background-url-field" class="field website-url-field">
+            <span>website URL</span>
+            <input id="website-background-url-input" type="url" placeholder="https://example.com" autocomplete="off">
+          </label>
           <label class="toggle-field">
             <span>
               <strong>auto play</strong>

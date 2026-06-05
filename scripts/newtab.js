@@ -60,6 +60,8 @@
   };
   const browserApi = globalThis.browser || globalThis.chrome;
   const elements = {
+    stage: document.querySelector(".stage"),
+    websiteBackground: document.getElementById("website-background"),
     backgroundImages: Array.from(document.querySelectorAll(".background-image")),
     albumMenuButton: document.getElementById("album-menu-button"),
     albumMenu: document.getElementById("album-menu"),
@@ -74,6 +76,8 @@
     autoPlayInput: document.getElementById("auto-play-input"),
     autoPlayIntervalField: document.getElementById("auto-play-interval-field"),
     autoPlayIntervalInput: document.getElementById("auto-play-interval-input"),
+    websiteBackgroundUrlField: document.getElementById("website-background-url-field"),
+    websiteBackgroundUrlInput: document.getElementById("website-background-url-input"),
     imageTransitionDurationInput: document.getElementById("image-transition-duration-input"),
     imageTransitionDurationValue: document.getElementById("image-transition-duration-value"),
     albumAdminList: document.getElementById("album-admin-list"),
@@ -101,7 +105,10 @@
     bindEvents();
     applyImageTransitionDuration();
     render();
-    showRandomImage();
+    syncWebsiteBackground();
+    if (!isWebsiteBackgroundActive()) {
+      showRandomImage();
+    }
     syncAutoPlayTimer();
   }
 
@@ -113,6 +120,9 @@
     elements.closeSettingsButton.addEventListener("click", closeSettings);
     elements.autoPlayInput.addEventListener("change", handleAutoPlayInput);
     elements.autoPlayIntervalInput.addEventListener("change", handleAutoPlayIntervalInput);
+    elements.websiteBackgroundUrlInput.addEventListener("input", handleWebsiteBackgroundUrlInput);
+    elements.websiteBackgroundUrlInput.addEventListener("change", handleWebsiteBackgroundUrlInput);
+    elements.websiteBackgroundUrlInput.addEventListener("keydown", handleWebsiteBackgroundUrlKeydown);
     elements.imageTransitionDurationInput.addEventListener("input", handleImageTransitionDurationInput);
     elements.closeEditorButton.addEventListener("click", closeAlbumEditor);
     elements.albumNameInput.addEventListener("input", handleAlbumNameInput);
@@ -216,6 +226,7 @@
     return {
       autoPlay: false,
       autoPlayIntervalSeconds: DEFAULT_AUTO_PLAY_INTERVAL_SECONDS,
+      websiteBackgroundUrl: "",
       imageTransitionDurationMs: DEFAULT_IMAGE_TRANSITION_DURATION_MS
     };
   }
@@ -231,6 +242,7 @@
         Number.isFinite(interval) && interval >= MIN_AUTO_PLAY_INTERVAL_SECONDS
           ? Math.round(interval)
           : defaults.autoPlayIntervalSeconds,
+      websiteBackgroundUrl: normalizeWebsiteUrl(settings && settings.websiteBackgroundUrl),
       imageTransitionDurationMs:
         Number.isFinite(transitionDuration)
           ? clamp(Math.round(transitionDuration), MIN_IMAGE_TRANSITION_DURATION_MS, MAX_IMAGE_TRANSITION_DURATION_MS)
@@ -259,6 +271,11 @@
   }
 
   function showRandomImage() {
+    if (isWebsiteBackgroundActive()) {
+      renderHeader();
+      return;
+    }
+
     const album = getSelectedAlbum();
     if (!album || album.images.length === 0) {
       resetBackgroundImages();
@@ -349,7 +366,7 @@
       autoPlayTimerId = null;
     }
 
-    if (!state.settings.autoPlay) {
+    if (!state.settings.autoPlay || isWebsiteBackgroundActive()) {
       return;
     }
 
@@ -382,12 +399,19 @@
 
   function renderHeader() {
     const album = getSelectedAlbum();
+    const websiteActive = isWebsiteBackgroundActive();
     elements.albumName.textContent = album ? album.name.trim() || "Untitled album" : "No album";
     elements.imageCount.textContent = album ? String(album.images.length) : "0";
+    elements.albumMenuButton.disabled = websiteActive;
+    elements.albumMenuButton.title = websiteActive ? "Clear the website URL to use albums" : "";
+    elements.shuffleButton.disabled = websiteActive;
+    elements.shuffleButton.title = websiteActive ? "Clear the website URL to shuffle images" : "Shuffle";
   }
 
   function renderAlbumMenu() {
+    const websiteActive = isWebsiteBackgroundActive();
     elements.albumMenuList.replaceChildren();
+    elements.newAlbumButton.disabled = websiteActive;
     state.albums.forEach((album) => {
       const item = document.createElement("div");
       item.className = "album-item";
@@ -396,6 +420,7 @@
       const selectButton = document.createElement("button");
       selectButton.className = "album-select";
       selectButton.type = "button";
+      selectButton.disabled = websiteActive;
       selectButton.setAttribute("role", "menuitem");
       selectButton.classList.toggle("is-selected", album.id === state.selectedAlbumId);
       selectButton.addEventListener("click", async () => {
@@ -403,7 +428,9 @@
         await saveState();
         closeAlbumMenu();
         render();
-        showRandomImage();
+        if (!isWebsiteBackgroundActive()) {
+          showRandomImage();
+        }
       });
 
       const titleRow = document.createElement("div");
@@ -424,6 +451,7 @@
       const editButton = document.createElement("button");
       editButton.className = "icon-button album-edit";
       editButton.type = "button";
+      editButton.disabled = websiteActive;
       editButton.title = "Edit album";
       editButton.setAttribute("aria-label", `Edit album: ${album.name}`);
       editButton.innerHTML =
@@ -440,12 +468,20 @@
       return;
     }
 
+    const websiteActive = isWebsiteBackgroundActive();
+    syncWebsiteUrlValidity(elements.websiteBackgroundUrlInput.value || state.settings.websiteBackgroundUrl);
+    if (document.activeElement !== elements.websiteBackgroundUrlInput) {
+      elements.websiteBackgroundUrlInput.value = state.settings.websiteBackgroundUrl;
+    }
     elements.autoPlayInput.checked = state.settings.autoPlay;
+    elements.autoPlayInput.disabled = websiteActive;
     elements.autoPlayIntervalInput.value = String(state.settings.autoPlayIntervalSeconds);
-    elements.autoPlayIntervalInput.disabled = !state.settings.autoPlay;
+    elements.autoPlayIntervalInput.disabled = websiteActive || !state.settings.autoPlay;
     elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
     elements.imageTransitionDurationInput.value = String(state.settings.imageTransitionDurationMs);
+    elements.imageTransitionDurationInput.disabled = websiteActive;
     elements.imageTransitionDurationValue.textContent = `${state.settings.imageTransitionDurationMs}ms`;
+    elements.albumAdminList.classList.toggle("is-disabled", websiteActive);
 
     elements.albumAdminList.replaceChildren();
     const canDelete = state.albums.length > 1;
@@ -467,8 +503,12 @@
       const deleteButton = document.createElement("button");
       deleteButton.className = "icon-button album-admin-delete";
       deleteButton.type = "button";
-      deleteButton.disabled = !canDelete;
-      deleteButton.title = canDelete ? "Delete album" : "You must keep at least one album";
+      deleteButton.disabled = websiteActive || !canDelete;
+      deleteButton.title = websiteActive
+        ? "Clear the website URL to edit albums"
+        : canDelete
+          ? "Delete album"
+          : "You must keep at least one album";
       deleteButton.setAttribute("aria-label", `Delete album: ${name.textContent}`);
       deleteButton.innerHTML =
         '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>';
@@ -498,6 +538,32 @@
     syncAutoPlayTimer();
   }
 
+  async function handleWebsiteBackgroundUrlInput(event) {
+    const wasWebsiteActive = isWebsiteBackgroundActive();
+    const normalizedUrl = syncWebsiteUrlValidity(event.target.value);
+    state.settings.websiteBackgroundUrl = normalizedUrl;
+    if (event.type === "change" || event.key === "Enter") {
+      event.target.value = normalizedUrl || event.target.value.trim();
+    }
+    await saveState();
+    syncWebsiteBackground();
+    syncAutoPlayTimer();
+    render();
+    if (wasWebsiteActive && !isWebsiteBackgroundActive()) {
+      showRandomImage();
+    }
+  }
+
+  function handleWebsiteBackgroundUrlKeydown(event) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    handleWebsiteBackgroundUrlInput(event);
+    event.target.blur();
+  }
+
   async function handleImageTransitionDurationInput(event) {
     const duration = Number(event.target.value);
     state.settings.imageTransitionDurationMs =
@@ -515,6 +581,70 @@
       "--image-transition-duration",
       `${state.settings.imageTransitionDurationMs}ms`
     );
+  }
+
+  function syncWebsiteBackground() {
+    const url = isWebsiteBackgroundActive() ? state.settings.websiteBackgroundUrl : "";
+    elements.stage.classList.toggle("has-website-background", Boolean(url));
+
+    if (url) {
+      closeAlbumMenu();
+      closeAlbumEditor();
+      if (elements.websiteBackground.src !== url) {
+        elements.websiteBackground.src = url;
+      }
+      return;
+    }
+
+    elements.websiteBackground.removeAttribute("src");
+  }
+
+  function isWebsiteBackgroundActive() {
+    return Boolean(normalizeWebsiteUrl(state.settings.websiteBackgroundUrl));
+  }
+
+  function normalizeWebsiteUrl(value) {
+    const rawValue = typeof value === "string" ? value.trim() : "";
+    if (!rawValue) {
+      return "";
+    }
+
+    const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(rawValue) ? rawValue : `https://${rawValue}`;
+
+    try {
+      const url = new URL(candidate);
+      if (url.protocol !== "http:" && url.protocol !== "https:") {
+        return "";
+      }
+
+      if (!hasWebsiteLikeHost(url.hostname)) {
+        return "";
+      }
+
+      return url.href;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function hasWebsiteLikeHost(hostname) {
+    return (
+      hostname === "localhost" ||
+      hostname.includes(".") ||
+      hostname.includes(":")
+    );
+  }
+
+  function syncWebsiteUrlValidity(value) {
+    const rawValue = typeof value === "string" ? value.trim() : "";
+    const normalizedUrl = normalizeWebsiteUrl(rawValue);
+    const isValid = !rawValue || Boolean(normalizedUrl);
+
+    elements.websiteBackgroundUrlInput.setCustomValidity(isValid ? "" : "Enter a valid http or https URL.");
+    elements.websiteBackgroundUrlField.classList.toggle("is-invalid", Boolean(rawValue && !normalizedUrl));
+    elements.websiteBackgroundUrlField.classList.toggle("is-valid", Boolean(normalizedUrl));
+
+    return normalizedUrl;
   }
 
   function getEditingAlbum() {
@@ -580,7 +710,9 @@
     state.selectedAlbumId = album.id;
     await saveState();
     render();
-    showRandomImage();
+    if (!isWebsiteBackgroundActive()) {
+      showRandomImage();
+    }
     openAlbumEditor(album.id);
   }
 
@@ -606,6 +738,7 @@
     if (editingAlbumId === albumId) {
       editingAlbumId = null;
       elements.albumEditorPanel.classList.remove("is-open");
+      elements.albumEditorPanel.style.left = "-420px";
       elements.albumEditorPanel.setAttribute("aria-hidden", "true");
     }
 
@@ -615,7 +748,7 @@
 
     await saveState();
     render();
-    if (wasSelected) {
+    if (wasSelected && !isWebsiteBackgroundActive()) {
       showRandomImage();
     }
   }
@@ -642,7 +775,7 @@
     elements.imageUrlInput.value = "";
     await saveState();
     render();
-    if (album.id === state.selectedAlbumId && !activeImage) {
+    if (album.id === state.selectedAlbumId && !activeImage && !isWebsiteBackgroundActive()) {
       showRandomImage();
     }
   }
@@ -660,7 +793,7 @@
     elements.imageFileInput.value = "";
     await saveState();
     render();
-    if (album.id === state.selectedAlbumId && !activeImage) {
+    if (album.id === state.selectedAlbumId && !activeImage && !isWebsiteBackgroundActive()) {
       showRandomImage();
     }
   }
@@ -691,7 +824,7 @@
     }
     await saveState();
     render();
-    if (activeImage && activeImage.id === imageId) {
+    if (activeImage && activeImage.id === imageId && !isWebsiteBackgroundActive()) {
       showRandomImage();
     }
   }
@@ -710,15 +843,21 @@
     closeAlbumEditor();
     renderSettings();
     elements.settingsPanel.classList.add("is-open");
+    elements.settingsPanel.style.right = "0";
     elements.settingsPanel.setAttribute("aria-hidden", "false");
   }
 
   function closeSettings() {
     elements.settingsPanel.classList.remove("is-open");
+    elements.settingsPanel.style.right = "-420px";
     elements.settingsPanel.setAttribute("aria-hidden", "true");
   }
 
   function openAlbumEditor(albumId) {
+    if (isWebsiteBackgroundActive()) {
+      return;
+    }
+
     const album = state.albums.find((item) => item.id === albumId);
     if (!album) {
       return;
@@ -729,6 +868,7 @@
     closeSettings();
     renderAlbumEditor();
     elements.albumEditorPanel.classList.add("is-open");
+    elements.albumEditorPanel.style.left = "0";
     elements.albumEditorPanel.setAttribute("aria-hidden", "false");
     elements.albumNameInput.focus();
     elements.albumNameInput.select();
@@ -744,6 +884,7 @@
     const wasEditing = editingAlbumId !== null;
     editingAlbumId = null;
     elements.albumEditorPanel.classList.remove("is-open");
+    elements.albumEditorPanel.style.left = "-420px";
     elements.albumEditorPanel.setAttribute("aria-hidden", "true");
 
     if (wasEditing) {
