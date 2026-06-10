@@ -7,57 +7,106 @@
   const DEFAULT_IMAGE_TRANSITION_DURATION_MS = 1600;
   const MIN_IMAGE_TRANSITION_DURATION_MS = 200;
   const MAX_IMAGE_TRANSITION_DURATION_MS = 3000;
-  const DEFAULT_ALBUM = {
-    id: "kanye",
-    name: "kanye",
-    images: [
-      {
-        id: "kanye-wp5735473",
-        src: "assets/kanye/wp5735473.jpg",
-        label: "wp5735473.jpg"
-      },
-      {
-        id: "kanye-wp5717645",
-        src: "assets/kanye/wp5717645.png",
-        label: "wp5717645.png"
-      },
-      {
-        id: "kanye-wp5735568",
-        src: "assets/kanye/wp5735568.jpg",
-        label: "wp5735568.jpg"
-      },
-      {
-        id: "kanye-wp5735587",
-        src: "assets/kanye/wp5735587.jpg",
-        label: "wp5735587.jpg"
-      },
-      {
-        id: "kanye-wp5735609",
-        src: "assets/kanye/wp5735609.jpg",
-        label: "wp5735609.jpg"
-      },
-      {
-        id: "kanye-wp5735772",
-        src: "assets/kanye/wp5735772.jpg",
-        label: "wp5735772.jpg"
-      },
-      {
-        id: "kanye-wp9673902",
-        src: "assets/kanye/wp9673902.jpg",
-        label: "wp9673902.jpg"
-      },
-      {
-        id: "kanye-wp14338884",
-        src: "assets/kanye/wp14338884.jpg",
-        label: "wp14338884.jpg"
-      },
-      {
-        id: "kanye-wp11340994",
-        src: "assets/kanye/wp11340994.jpg",
-        label: "wp11340994.jpg"
-      }
-    ]
-  };
+  const DEFAULT_ALBUMS = [
+    {
+      id: "kanye",
+      name: "kanye",
+      images: [
+        {
+          id: "kanye-wp5735473",
+          src: "assets/kanye/wp5735473.jpg",
+          label: "wp5735473.jpg"
+        },
+        {
+          id: "kanye-wp5717645",
+          src: "assets/kanye/wp5717645.png",
+          label: "wp5717645.png"
+        },
+        {
+          id: "kanye-wp5735568",
+          src: "assets/kanye/wp5735568.jpg",
+          label: "wp5735568.jpg"
+        },
+        {
+          id: "kanye-wp5735587",
+          src: "assets/kanye/wp5735587.jpg",
+          label: "wp5735587.jpg"
+        },
+        {
+          id: "kanye-wp5735609",
+          src: "assets/kanye/wp5735609.jpg",
+          label: "wp5735609.jpg"
+        },
+        {
+          id: "kanye-wp5735772",
+          src: "assets/kanye/wp5735772.jpg",
+          label: "wp5735772.jpg"
+        },
+        {
+          id: "kanye-wp9673902",
+          src: "assets/kanye/wp9673902.jpg",
+          label: "wp9673902.jpg"
+        },
+        {
+          id: "kanye-wp14338884",
+          src: "assets/kanye/wp14338884.jpg",
+          label: "wp14338884.jpg"
+        },
+        {
+          id: "kanye-wp11340994",
+          src: "assets/kanye/wp11340994.jpg",
+          label: "wp11340994.jpg"
+        }
+      ]
+    },
+    {
+      id: "travis-scott",
+      name: "travis scott",
+      images: [
+        {
+          id: "travis-scott-wp5202843",
+          src: "assets/travis-scott/wp5202843.jpg",
+          label: "wp5202843.jpg"
+        },
+        {
+          id: "travis-scott-wp5538795",
+          src: "assets/travis-scott/wp5538795.jpg",
+          label: "wp5538795.jpg"
+        },
+        {
+          id: "travis-scott-wp5902811",
+          src: "assets/travis-scott/wp5902811.jpg",
+          label: "wp5902811.jpg"
+        },
+        {
+          id: "travis-scott-wp5180585",
+          src: "assets/travis-scott/wp5180585.jpg",
+          label: "wp5180585.jpg"
+        },
+        {
+          id: "travis-scott-wp5902853",
+          src: "assets/travis-scott/wp5902853.jpg",
+          label: "wp5902853.jpg"
+        },
+        {
+          id: "travis-scott-wp5902861",
+          src: "assets/travis-scott/wp5902861.png",
+          label: "wp5902861.png"
+        },
+        {
+          id: "travis-scott-wp5564039",
+          src: "assets/travis-scott/wp5564039.jpg",
+          label: "wp5564039.jpg"
+        },
+        {
+          id: "travis-scott-wp1849377",
+          src: "assets/travis-scott/wp1849377.jpg",
+          label: "wp1849377.jpg"
+        }
+      ]
+    }
+  ];
+  const DEFAULT_ALBUM = DEFAULT_ALBUMS[0];
   const browserApi = globalThis.browser || globalThis.chrome;
   const elements = {
     stage: document.querySelector(".stage"),
@@ -203,17 +252,20 @@
       images: album.images.filter(isValidImage)
     }));
 
-    const defaultAlbum = nextState.albums.find((album) => album.id === DEFAULT_ALBUM.id);
-    if (!defaultAlbum) {
-      nextState.albums.unshift(structuredCloneAlbum(DEFAULT_ALBUM));
-    } else {
+    DEFAULT_ALBUMS.forEach((albumTemplate) => {
+      const defaultAlbum = nextState.albums.find((album) => album.id === albumTemplate.id);
+      if (!defaultAlbum) {
+        nextState.albums.push(structuredCloneAlbum(albumTemplate));
+        return;
+      }
+
       const knownImageIds = new Set(defaultAlbum.images.map((image) => image.id));
-      DEFAULT_ALBUM.images.forEach((image) => {
+      albumTemplate.images.forEach((image) => {
         if (!knownImageIds.has(image.id)) {
           defaultAlbum.images.push({ ...image });
         }
       });
-    }
+    });
 
     if (!nextState.albums.some((album) => album.id === nextState.selectedAlbumId)) {
       nextState.selectedAlbumId = nextState.albums[0].id;

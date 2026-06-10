@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Album New Tab",
+  "name": "new tab",
   "version": "0.1.0",
-  "description": "Replace Chrome's new tab page with a random fullscreen image from the selected album.",
+  "description": "replace browsers new tab page with a random fullscreen image from a selected album, or have a website as the new tab.",
   "permissions": ["storage"],
   "icons": {
     "16": "assets/icons/icon-16.png",

@@ -29,13 +29,25 @@ Copy-Item -LiteralPath (Join-Path $root "newtab.html") -Destination $build
 Copy-Item -LiteralPath (Join-Path $root "scripts\newtab.js") -Destination (Join-Path $build "scripts")
 Copy-Item -LiteralPath (Join-Path $root "styles\newtab.css") -Destination (Join-Path $build "styles")
 Copy-Item -LiteralPath (Join-Path $root "assets\kanye") -Destination (Join-Path $build "assets") -Recurse
+Copy-Item -LiteralPath (Join-Path $root "assets\travis-scott") -Destination (Join-Path $build "assets") -Recurse
 Copy-Item -LiteralPath (Join-Path $root "assets\icons") -Destination (Join-Path $build "assets") -Recurse
 
 if (Test-Path -LiteralPath $zip) {
   Remove-Item -LiteralPath $zip -Force
 }
 
-Compress-Archive -Path (Join-Path $build "*") -DestinationPath $zip -Force
+$packageItems = Get-ChildItem -LiteralPath $build -Force
+Compress-Archive -LiteralPath $packageItems.FullName -DestinationPath $zip -Force
 
-Write-Host "Chrome package created: $zip"
+if (-not (Test-Path -LiteralPath $zip)) {
+  throw "Chrome zip was not created: $zip"
+}
+
+$zipInfo = Get-Item -LiteralPath $zip
+if ($zipInfo.Length -le 0) {
+  throw "Chrome zip is empty: $zip"
+}
+
+Write-Host "Chrome package created: $($zipInfo.FullName)"
+Write-Host "Chrome package size: $($zipInfo.Length) bytes"
 Write-Host "Unpacked test folder: $build"
