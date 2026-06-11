@@ -7,106 +7,36 @@
   const DEFAULT_IMAGE_TRANSITION_DURATION_MS = 1600;
   const MIN_IMAGE_TRANSITION_DURATION_MS = 200;
   const MAX_IMAGE_TRANSITION_DURATION_MS = 3000;
-  const DEFAULT_ALBUMS = [
-    {
-      id: "kanye",
-      name: "kanye",
-      images: [
-        {
-          id: "kanye-wp5735473",
-          src: "assets/kanye/wp5735473.jpg",
-          label: "wp5735473.jpg"
-        },
-        {
-          id: "kanye-wp5717645",
-          src: "assets/kanye/wp5717645.png",
-          label: "wp5717645.png"
-        },
-        {
-          id: "kanye-wp5735568",
-          src: "assets/kanye/wp5735568.jpg",
-          label: "wp5735568.jpg"
-        },
-        {
-          id: "kanye-wp5735587",
-          src: "assets/kanye/wp5735587.jpg",
-          label: "wp5735587.jpg"
-        },
-        {
-          id: "kanye-wp5735609",
-          src: "assets/kanye/wp5735609.jpg",
-          label: "wp5735609.jpg"
-        },
-        {
-          id: "kanye-wp5735772",
-          src: "assets/kanye/wp5735772.jpg",
-          label: "wp5735772.jpg"
-        },
-        {
-          id: "kanye-wp9673902",
-          src: "assets/kanye/wp9673902.jpg",
-          label: "wp9673902.jpg"
-        },
-        {
-          id: "kanye-wp14338884",
-          src: "assets/kanye/wp14338884.jpg",
-          label: "wp14338884.jpg"
-        },
-        {
-          id: "kanye-wp11340994",
-          src: "assets/kanye/wp11340994.jpg",
-          label: "wp11340994.jpg"
-        }
-      ]
-    },
-    {
-      id: "travis-scott",
-      name: "travis scott",
-      images: [
-        {
-          id: "travis-scott-wp5202843",
-          src: "assets/travis-scott/wp5202843.jpg",
-          label: "wp5202843.jpg"
-        },
-        {
-          id: "travis-scott-wp5538795",
-          src: "assets/travis-scott/wp5538795.jpg",
-          label: "wp5538795.jpg"
-        },
-        {
-          id: "travis-scott-wp5902811",
-          src: "assets/travis-scott/wp5902811.jpg",
-          label: "wp5902811.jpg"
-        },
-        {
-          id: "travis-scott-wp5180585",
-          src: "assets/travis-scott/wp5180585.jpg",
-          label: "wp5180585.jpg"
-        },
-        {
-          id: "travis-scott-wp5902853",
-          src: "assets/travis-scott/wp5902853.jpg",
-          label: "wp5902853.jpg"
-        },
-        {
-          id: "travis-scott-wp5902861",
-          src: "assets/travis-scott/wp5902861.png",
-          label: "wp5902861.png"
-        },
-        {
-          id: "travis-scott-wp5564039",
-          src: "assets/travis-scott/wp5564039.jpg",
-          label: "wp5564039.jpg"
-        },
-        {
-          id: "travis-scott-wp1849377",
-          src: "assets/travis-scott/wp1849377.jpg",
-          label: "wp1849377.jpg"
-        }
-      ]
-    }
-  ];
+  const DEFAULT_ALBUMS = globalThis.DEFAULT_ALBUMS;
+  if (!Array.isArray(DEFAULT_ALBUMS) || DEFAULT_ALBUMS.length === 0) {
+    throw new Error("Default albums failed to load.");
+  }
+
   const DEFAULT_ALBUM = DEFAULT_ALBUMS[0];
+  const REMOVED_DEFAULT_IMAGE_IDS_BY_ALBUM = {
+    dogs: new Set([
+      "dogs-golden-retriever-surf",
+      "dogs-husky-snow-forest",
+      "dogs-corgi-wildflower-meadow",
+      "dogs-black-lab-mountain-lake",
+      "dogs-samoyed-window-rug",
+      "dogs-border-collie-field",
+      "dogs-dachshund-raincoat-city",
+      "dogs-german-shepherd-overlook",
+      "dogs-beagle-autumn-park",
+      "dogs-rescue-dogs-porch"
+    ]),
+    planet: new Set([
+      "planet-earth-blue-marble",
+      "planet-saturn-during-equinox",
+      "planet-neptune-voyager2-color-calibrated",
+      "planet-earthrise-apollo-8",
+      "planet-solar-system-montage",
+      "planet-saturn-eclipse-cassini",
+      "planet-jupiter-opal-2024",
+      "planet-mars-august-2021"
+    ])
+  };
   const browserApi = globalThis.browser || globalThis.chrome;
   const elements = {
     stage: document.querySelector(".stage"),
@@ -259,12 +189,22 @@
         return;
       }
 
+      const removedImageIds = REMOVED_DEFAULT_IMAGE_IDS_BY_ALBUM[albumTemplate.id];
+      if (removedImageIds) {
+        defaultAlbum.images = defaultAlbum.images.filter((image) => !removedImageIds.has(image.id));
+      }
+
       const knownImageIds = new Set(defaultAlbum.images.map((image) => image.id));
       albumTemplate.images.forEach((image) => {
         if (!knownImageIds.has(image.id)) {
           defaultAlbum.images.push({ ...image });
         }
       });
+
+      const currentImageIds = new Set(defaultAlbum.images.map((image) => image.id));
+      if (!currentImageIds.has(nextState.lastImageByAlbum[albumTemplate.id])) {
+        delete nextState.lastImageByAlbum[albumTemplate.id];
+      }
     });
 
     if (!nextState.albums.some((album) => album.id === nextState.selectedAlbumId)) {

@@ -26,9 +26,15 @@ New-Item -ItemType Directory -Path (Join-Path $build "assets") | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $root "manifest.chrome.json") -Destination (Join-Path $build "manifest.json")
 Copy-Item -LiteralPath (Join-Path $root "newtab.html") -Destination $build
+Copy-Item -LiteralPath (Join-Path $root "scripts\default-albums.js") -Destination (Join-Path $build "scripts")
 Copy-Item -LiteralPath (Join-Path $root "scripts\newtab.js") -Destination (Join-Path $build "scripts")
 Copy-Item -LiteralPath (Join-Path $root "styles\newtab.css") -Destination (Join-Path $build "styles")
+Copy-Item -LiteralPath (Join-Path $root "assets\cities") -Destination (Join-Path $build "assets") -Recurse
+Copy-Item -LiteralPath (Join-Path $root "assets\dogs") -Destination (Join-Path $build "assets") -Recurse
 Copy-Item -LiteralPath (Join-Path $root "assets\kanye") -Destination (Join-Path $build "assets") -Recurse
+Copy-Item -LiteralPath (Join-Path $root "assets\kpop") -Destination (Join-Path $build "assets") -Recurse
+Copy-Item -LiteralPath (Join-Path $root "assets\mountains") -Destination (Join-Path $build "assets") -Recurse
+Copy-Item -LiteralPath (Join-Path $root "assets\planet") -Destination (Join-Path $build "assets") -Recurse
 Copy-Item -LiteralPath (Join-Path $root "assets\travis-scott") -Destination (Join-Path $build "assets") -Recurse
 Copy-Item -LiteralPath (Join-Path $root "assets\icons") -Destination (Join-Path $build "assets") -Recurse
 
