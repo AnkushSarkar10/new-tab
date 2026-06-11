@@ -545,8 +545,71 @@ button {
 }
 
 .album-item {
-  grid-template-columns: 1fr auto;
+  position: relative;
+  grid-template-columns: auto 1fr auto;
   padding: 8px;
+}
+
+.album-item.is-dragging {
+  opacity: 0.52;
+}
+
+.album-item.is-drop-before::before,
+.album-item.is-drop-after::after {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: #f6e7b8;
+  box-shadow: 0 0 18px rgba(246, 231, 184, 0.5);
+  content: "";
+}
+
+.album-item.is-drop-before::before {
+  top: -6px;
+}
+
+.album-item.is-drop-after::after {
+  bottom: -6px;
+}
+
+.album-drag-handle {
+  display: inline-grid;
+  width: 24px;
+  height: 34px;
+  place-items: center;
+  align-self: center;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.46);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.album-drag-handle[data-sortable="false"] {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.album-drag-handle[data-sortable="true"]:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.album-drag-handle[data-sortable="true"]:active,
+.album-menu-list.is-sorting .album-drag-handle {
+  cursor: grabbing;
+}
+
+.album-drag-handle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .album-select {

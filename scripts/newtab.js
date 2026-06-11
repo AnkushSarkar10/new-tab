@@ -75,6 +75,7 @@
   let autoPlayTimerId = null;
   let visibleBackgroundIndex = 0;
   let imageLoadToken = 0;
+  let albumDragState = null;
 
   init();
 
@@ -402,12 +403,25 @@
 
   function renderAlbumMenu() {
     const websiteActive = isWebsiteBackgroundActive();
+    const canSortAlbums = !websiteActive && state.albums.length > 1;
     elements.albumMenuList.replaceChildren();
     elements.newAlbumButton.disabled = websiteActive;
     state.albums.forEach((album) => {
       const item = document.createElement("div");
       item.className = "album-item";
       item.setAttribute("role", "listitem");
+      item.dataset.albumId = album.id;
+
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "album-drag-handle";
+      dragHandle.title = canSortAlbums ? "Drag to sort albums" : "";
+      dragHandle.dataset.sortable = String(canSortAlbums);
+      dragHandle.draggable = false;
+      dragHandle.setAttribute("aria-hidden", "true");
+      dragHandle.innerHTML =
+        '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 5h.01"></path><path d="M15 5h.01"></path><path d="M9 12h.01"></path><path d="M15 12h.01"></path><path d="M9 19h.01"></path><path d="M15 19h.01"></path></svg>';
+      dragHandle.addEventListener("pointerdown", (event) => handleAlbumPointerDown(event, album.id, item));
+      dragHandle.addEventListener("pointercancel", clearAlbumDragState);
 
       const selectButton = document.createElement("button");
       selectButton.className = "album-select";
@@ -450,9 +464,135 @@
         '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
       editButton.addEventListener("click", () => openAlbumEditor(album.id));
 
-      item.append(selectButton, editButton);
+      item.append(dragHandle, selectButton, editButton);
       elements.albumMenuList.append(item);
     });
+  }
+
+  function handleAlbumPointerDown(event, albumId, item) {
+    const isPrimaryMouseButton = event.pointerType !== "mouse" || event.button === 0;
+    if (isWebsiteBackgroundActive() || state.albums.length <= 1 || !isPrimaryMouseButton) {
+      return;
+    }
+
+    event.preventDefault();
+    albumDragState = {
+      albumId,
+      captureElement: event.currentTarget,
+      dropAfter: false,
+      dropTargetId: null,
+      pointerId: event.pointerId
+    };
+    elements.albumMenuList.classList.add("is-sorting");
+    item.classList.add("is-dragging");
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.addEventListener("pointermove", handleAlbumPointerMove);
+    document.addEventListener("pointerup", handleAlbumPointerUp);
+    document.addEventListener("mousemove", handleAlbumPointerMove);
+    document.addEventListener("mouseup", handleAlbumPointerUp);
+  }
+
+  function handleAlbumPointerMove(event) {
+    if (!isAlbumDragEvent(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    updateAlbumDragTarget(event);
+  }
+
+  async function handleAlbumPointerUp(event) {
+    if (!isAlbumDragEvent(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    updateAlbumDragTarget(event);
+    const dragState = albumDragState;
+    const captureElement = dragState.captureElement;
+    if (
+      typeof event.pointerId === "number" &&
+      captureElement &&
+      captureElement.hasPointerCapture(event.pointerId)
+    ) {
+      captureElement.releasePointerCapture(event.pointerId);
+    }
+    clearAlbumDragState();
+
+    if (dragState.dropTargetId) {
+      await moveAlbum(dragState.albumId, dragState.dropTargetId, dragState.dropAfter);
+    }
+  }
+
+  function isAlbumDragEvent(event) {
+    return (
+      albumDragState &&
+      (typeof event.pointerId !== "number" || event.pointerId === albumDragState.pointerId)
+    );
+  }
+
+  function updateAlbumDragTarget(event) {
+    if (!albumDragState) {
+      return;
+    }
+
+    clearAlbumDropIndicators();
+    const targetItem = document.elementFromPoint(event.clientX, event.clientY)?.closest(".album-item");
+    if (!targetItem || !elements.albumMenuList.contains(targetItem)) {
+      albumDragState.dropTargetId = null;
+      return;
+    }
+
+    const targetAlbumId = targetItem.dataset.albumId;
+    if (!targetAlbumId || targetAlbumId === albumDragState.albumId) {
+      albumDragState.dropTargetId = null;
+      return;
+    }
+
+    const rect = targetItem.getBoundingClientRect();
+    const dropAfter = event.clientY > rect.top + rect.height / 2;
+    albumDragState.dropTargetId = targetAlbumId;
+    albumDragState.dropAfter = dropAfter;
+    targetItem.classList.toggle("is-drop-before", !dropAfter);
+    targetItem.classList.toggle("is-drop-after", dropAfter);
+  }
+
+  async function moveAlbum(albumId, targetAlbumId, dropAfter) {
+    const fromIndex = state.albums.findIndex((album) => album.id === albumId);
+    const targetIndex = state.albums.findIndex((album) => album.id === targetAlbumId);
+    if (fromIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    let insertIndex = targetIndex + (dropAfter ? 1 : 0);
+    const [movedAlbum] = state.albums.splice(fromIndex, 1);
+
+    if (fromIndex < insertIndex) {
+      insertIndex -= 1;
+    }
+
+    state.albums.splice(insertIndex, 0, movedAlbum);
+    await saveState();
+    render();
+  }
+
+  function clearAlbumDragState() {
+    albumDragState = null;
+    document.removeEventListener("pointermove", handleAlbumPointerMove);
+    document.removeEventListener("pointerup", handleAlbumPointerUp);
+    document.removeEventListener("mousemove", handleAlbumPointerMove);
+    document.removeEventListener("mouseup", handleAlbumPointerUp);
+    elements.albumMenuList.classList.remove("is-sorting");
+    clearAlbumDropIndicators();
+    elements.albumMenuList
+      .querySelectorAll(".is-dragging")
+      .forEach((item) => item.classList.remove("is-dragging"));
+  }
+
+  function clearAlbumDropIndicators() {
+    elements.albumMenuList
+      .querySelectorAll(".is-drop-before, .is-drop-after")
+      .forEach((item) => item.classList.remove("is-drop-before", "is-drop-after"));
   }
 
   function renderSettings() {
