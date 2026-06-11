@@ -63,6 +63,30 @@
         </div>
       </section>
 
+      <section id="quick-access-wrap" class="quick-access-wrap" aria-label="Quick access">
+        <nav id="quick-access" class="quick-access" aria-label="Quick access links"></nav>
+        <form id="quick-access-form" class="quick-access-inline-form" aria-hidden="true">
+          <input
+            id="quick-access-url-input"
+            type="url"
+            placeholder="https://example.com"
+            autocomplete="off"
+            aria-label="Quick access URL"
+          >
+          <button id="save-quick-access-button" class="quick-access-form-button" type="submit" aria-label="Add quick access link" title="Add link">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m5 12 5 5L20 7"></path>
+            </svg>
+          </button>
+          <button id="cancel-quick-access-button" class="quick-access-form-button" type="button" aria-label="Cancel quick access link" title="Cancel">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </form>
+      </section>
+
       <aside id="settings-panel" class="settings-panel" aria-label="Settings" aria-hidden="true">
         <header class="panel-header">
           <h1>settings</h1>

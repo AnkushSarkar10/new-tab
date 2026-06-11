@@ -127,6 +127,26 @@
           id: "kpop-le-sserafim-golden-disc-2026",
           src: "assets/kpop/le-sserafim-golden-disc-2026.png",
           label: "le-sserafim-golden-disc-2026.png"
+        },
+        {
+          id: "kpop-wp3111579",
+          src: "https://wallpapercave.com/wp/wp3111579.jpg",
+          label: "wp3111579.jpg"
+        },
+        {
+          id: "kpop-wp3544114",
+          src: "https://wallpapercave.com/wp/wp3544114.jpg",
+          label: "wp3544114.jpg"
+        },
+        {
+          id: "kpop-wp13858884",
+          src: "https://wallpapercave.com/wp/wp13858884.jpg",
+          label: "wp13858884.jpg"
+        },
+        {
+          id: "kpop-wp11688510",
+          src: "https://wallpapercave.com/wp/wp11688510.jpg",
+          label: "wp11688510.jpg"
         }
       ]
     },

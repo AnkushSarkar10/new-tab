@@ -7,6 +7,8 @@
   const DEFAULT_IMAGE_TRANSITION_DURATION_MS = 1600;
   const MIN_IMAGE_TRANSITION_DURATION_MS = 200;
   const MAX_IMAGE_TRANSITION_DURATION_MS = 3000;
+  const MAX_QUICK_ACCESS_LINKS = 5;
+  const QUICK_ACCESS_LABEL_MAX_LENGTH = 32;
   const DEFAULT_ALBUMS = globalThis.DEFAULT_ALBUMS;
   if (!Array.isArray(DEFAULT_ALBUMS) || DEFAULT_ALBUMS.length === 0) {
     throw new Error("Default albums failed to load.");
@@ -60,6 +62,11 @@
     imageTransitionDurationInput: document.getElementById("image-transition-duration-input"),
     imageTransitionDurationValue: document.getElementById("image-transition-duration-value"),
     albumAdminList: document.getElementById("album-admin-list"),
+    quickAccess: document.getElementById("quick-access"),
+    quickAccessForm: document.getElementById("quick-access-form"),
+    quickAccessUrlInput: document.getElementById("quick-access-url-input"),
+    saveQuickAccessButton: document.getElementById("save-quick-access-button"),
+    cancelQuickAccessButton: document.getElementById("cancel-quick-access-button"),
     albumEditorPanel: document.getElementById("album-editor-panel"),
     closeEditorButton: document.getElementById("close-editor-button"),
     albumNameInput: document.getElementById("album-name-input"),
@@ -104,6 +111,11 @@
     elements.websiteBackgroundUrlInput.addEventListener("change", handleWebsiteBackgroundUrlInput);
     elements.websiteBackgroundUrlInput.addEventListener("keydown", handleWebsiteBackgroundUrlKeydown);
     elements.imageTransitionDurationInput.addEventListener("input", handleImageTransitionDurationInput);
+    elements.quickAccessForm.addEventListener("submit", addQuickAccessLink);
+    elements.quickAccessUrlInput.addEventListener("input", handleQuickAccessUrlInput);
+    elements.quickAccessUrlInput.addEventListener("change", handleQuickAccessUrlInput);
+    elements.quickAccessUrlInput.addEventListener("keydown", handleQuickAccessInputKeydown);
+    elements.cancelQuickAccessButton.addEventListener("click", closeQuickAccessForm);
     elements.closeEditorButton.addEventListener("click", closeAlbumEditor);
     elements.albumNameInput.addEventListener("input", handleAlbumNameInput);
     elements.addUrlButton.addEventListener("click", addUrlsToEditingAlbum);
@@ -112,6 +124,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeAlbumMenu();
+        closeQuickAccessForm();
         closeSettings();
         closeAlbumEditor();
       }
@@ -173,11 +186,13 @@
             selectedAlbumId: DEFAULT_ALBUM.id,
             lastImageByAlbum: {},
             settings: getDefaultSettings(),
+            quickAccessLinks: [],
             albums: []
           };
 
     nextState.lastImageByAlbum = nextState.lastImageByAlbum || {};
     nextState.settings = normalizeSettings(nextState.settings);
+    nextState.quickAccessLinks = normalizeQuickAccessLinks(nextState.quickAccessLinks);
     nextState.albums = nextState.albums.filter(isValidAlbum).map((album) => ({
       ...album,
       images: album.images.filter(isValidImage)
@@ -249,6 +264,34 @@
 
   function isValidImage(image) {
     return image && typeof image.id === "string" && typeof image.src === "string";
+  }
+
+  function normalizeQuickAccessLinks(links) {
+    if (!Array.isArray(links)) {
+      return [];
+    }
+
+    return links
+      .map(normalizeQuickAccessLink)
+      .filter(Boolean)
+      .slice(0, MAX_QUICK_ACCESS_LINKS);
+  }
+
+  function normalizeQuickAccessLink(link) {
+    if (!link || typeof link !== "object") {
+      return null;
+    }
+
+    const url = normalizeWebsiteUrl(link.url);
+    if (!url) {
+      return null;
+    }
+
+    return {
+      id: typeof link.id === "string" && link.id ? link.id : createQuickAccessId(),
+      label: normalizeQuickAccessLabel("", url),
+      url
+    };
   }
 
   function structuredCloneAlbum(album) {
@@ -385,6 +428,7 @@
 
   function render() {
     renderHeader();
+    renderQuickAccess();
     renderAlbumMenu();
     renderSettings();
     renderAlbumEditor();
@@ -399,6 +443,61 @@
     elements.albumMenuButton.title = websiteActive ? "Clear the website URL to use albums" : "";
     elements.shuffleButton.disabled = websiteActive;
     elements.shuffleButton.title = websiteActive ? "Clear the website URL to shuffle images" : "Shuffle";
+  }
+
+  function renderQuickAccess() {
+    elements.quickAccess.replaceChildren();
+
+    state.quickAccessLinks.forEach((link) => {
+      const item = document.createElement("div");
+      item.className = "quick-access-link";
+
+      const anchor = document.createElement("a");
+      anchor.className = "quick-access-anchor";
+      anchor.href = link.url;
+      anchor.title = link.url;
+      anchor.setAttribute("aria-label", `Open ${link.label}`);
+
+      const iconWrap = document.createElement("span");
+      iconWrap.className = "quick-access-icon-wrap";
+      iconWrap.setAttribute("aria-hidden", "true");
+
+      const icon = document.createElement("img");
+      icon.className = "quick-access-icon";
+      icon.alt = "";
+      icon.loading = "lazy";
+
+      const fallback = document.createElement("span");
+      fallback.className = "quick-access-fallback";
+      fallback.textContent = getQuickAccessFallbackText(link);
+
+      const removeButton = document.createElement("button");
+      removeButton.className = "quick-access-remove";
+      removeButton.type = "button";
+      removeButton.title = "Remove link";
+      removeButton.setAttribute("aria-label", `Remove quick access link: ${link.label}`);
+      removeButton.innerHTML =
+        '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+      removeButton.addEventListener("click", () => removeQuickAccessLink(link.id));
+
+      iconWrap.append(icon, fallback);
+      anchor.append(iconWrap);
+      item.append(anchor, removeButton);
+      attachQuickAccessIcon(icon, anchor, link);
+      elements.quickAccess.append(item);
+    });
+
+    if (state.quickAccessLinks.length < MAX_QUICK_ACCESS_LINKS) {
+      const addButton = document.createElement("button");
+      addButton.className = "quick-access-add";
+      addButton.type = "button";
+      addButton.title = "Add quick access link";
+      addButton.setAttribute("aria-label", "Add quick access link");
+      addButton.innerHTML =
+        '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>';
+      addButton.addEventListener("click", openQuickAccessForm);
+      elements.quickAccess.append(addButton);
+    }
   }
 
   function renderAlbumMenu() {
@@ -708,6 +807,83 @@
     await saveState();
   }
 
+  function handleQuickAccessUrlInput(event) {
+    const normalizedUrl = syncQuickAccessUrlValidity(event.target.value);
+    if (event.type === "change" && normalizedUrl) {
+      event.target.value = normalizedUrl;
+    }
+    elements.saveQuickAccessButton.disabled = !normalizedUrl;
+  }
+
+  async function handleQuickAccessInputKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeQuickAccessForm();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await addQuickAccessLink(event);
+    }
+  }
+
+  function openQuickAccessForm() {
+    if (state.quickAccessLinks.length >= MAX_QUICK_ACCESS_LINKS) {
+      return;
+    }
+
+    elements.quickAccess.classList.add("is-editing");
+    elements.quickAccessForm.classList.add("is-open");
+    elements.quickAccessForm.setAttribute("aria-hidden", "false");
+    elements.quickAccessUrlInput.value = "";
+    syncQuickAccessUrlValidity("");
+    elements.saveQuickAccessButton.disabled = true;
+    elements.quickAccessUrlInput.focus();
+  }
+
+  function closeQuickAccessForm() {
+    elements.quickAccess.classList.remove("is-editing");
+    elements.quickAccessForm.classList.remove("is-open");
+    elements.quickAccessForm.setAttribute("aria-hidden", "true");
+    elements.quickAccessUrlInput.value = "";
+    syncQuickAccessUrlValidity("");
+  }
+
+  async function addQuickAccessLink(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (state.quickAccessLinks.length >= MAX_QUICK_ACCESS_LINKS) {
+      closeQuickAccessForm();
+      return;
+    }
+
+    const normalizedUrl = syncQuickAccessUrlValidity(elements.quickAccessUrlInput.value);
+    if (!normalizedUrl) {
+      elements.quickAccessUrlInput.reportValidity();
+      elements.saveQuickAccessButton.disabled = true;
+      return;
+    }
+
+    state.quickAccessLinks.push({
+      id: createQuickAccessId(),
+      label: normalizeQuickAccessLabel("", normalizedUrl),
+      url: normalizedUrl
+    });
+
+    await saveState();
+    closeQuickAccessForm();
+    render();
+  }
+
+  async function removeQuickAccessLink(linkId) {
+    state.quickAccessLinks = state.quickAccessLinks.filter((link) => link.id !== linkId);
+    await saveState();
+    render();
+  }
+
   function applyImageTransitionDuration() {
     document.documentElement.style.setProperty(
       "--image-transition-duration",
@@ -777,6 +953,77 @@
     elements.websiteBackgroundUrlField.classList.toggle("is-valid", Boolean(normalizedUrl));
 
     return normalizedUrl;
+  }
+
+  function syncQuickAccessUrlValidity(value) {
+    const rawValue = typeof value === "string" ? value.trim() : "";
+    const normalizedUrl = normalizeWebsiteUrl(rawValue);
+    const isValid = !rawValue || Boolean(normalizedUrl);
+
+    elements.quickAccessUrlInput.setCustomValidity(isValid ? "" : "Enter a valid http or https URL.");
+    elements.quickAccessForm.classList.toggle("is-invalid", Boolean(rawValue && !normalizedUrl));
+
+    return normalizedUrl;
+  }
+
+  function createQuickAccessId() {
+    return `quick-link-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function normalizeQuickAccessLabel(label, url) {
+    const normalizedLabel =
+      typeof label === "string"
+        ? label.trim().replace(/\s+/g, " ")
+        : "";
+
+    return (normalizedLabel || hostnameFromUrl(url)).slice(0, QUICK_ACCESS_LABEL_MAX_LENGTH);
+  }
+
+  function hostnameFromUrl(url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./i, "");
+    } catch (error) {
+      return url;
+    }
+  }
+
+  function getQuickAccessFallbackText(link) {
+    return (link.label || hostnameFromUrl(link.url)).trim().charAt(0) || "?";
+  }
+
+  function getQuickAccessIconSources(url) {
+    try {
+      const origin = new URL(url).origin;
+      return [
+        new URL("/favicon.ico", origin).href,
+        new URL("/apple-touch-icon.png", origin).href
+      ];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function attachQuickAccessIcon(icon, fallbackTarget, link) {
+    const sources = getQuickAccessIconSources(link.url);
+    if (sources.length === 0) {
+      fallbackTarget.classList.add("has-fallback");
+      return;
+    }
+
+    icon.referrerPolicy = "no-referrer";
+    icon.dataset.iconIndex = "0";
+    icon.addEventListener("load", () => fallbackTarget.classList.remove("has-fallback"));
+    icon.addEventListener("error", () => {
+      const nextIndex = Number(icon.dataset.iconIndex || "0") + 1;
+      if (sources[nextIndex]) {
+        icon.dataset.iconIndex = String(nextIndex);
+        icon.src = sources[nextIndex];
+        return;
+      }
+
+      fallbackTarget.classList.add("has-fallback");
+    });
+    icon.src = sources[0];
   }
 
   function getEditingAlbum() {
