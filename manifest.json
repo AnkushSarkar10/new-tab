@@ -1,11 +1,17 @@
 {
   "manifest_version": 2,
   "name": "new tab",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "want a uniform clean experience when you open a new tab? new tab is your solution. available across all browsers.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
+  "background": {
+    "scripts": ["scripts/startup.js"]
+  },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
+  },
+  "chrome_settings_overrides": {
+    "homepage": "newtab.html"
   },
   "browser_specific_settings": {
     "gecko": {

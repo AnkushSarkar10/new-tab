@@ -28,6 +28,7 @@ Copy-Item -LiteralPath (Join-Path $root "manifest.chrome.json") -Destination (Jo
 Copy-Item -LiteralPath (Join-Path $root "newtab.html") -Destination $build
 Copy-Item -LiteralPath (Join-Path $root "scripts\default-albums.js") -Destination (Join-Path $build "scripts")
 Copy-Item -LiteralPath (Join-Path $root "scripts\newtab.js") -Destination (Join-Path $build "scripts")
+Copy-Item -LiteralPath (Join-Path $root "scripts\startup.js") -Destination (Join-Path $build "scripts")
 Copy-Item -LiteralPath (Join-Path $root "styles\newtab.css") -Destination (Join-Path $build "styles")
 Copy-Item -LiteralPath (Join-Path $root "assets\cities") -Destination (Join-Path $build "assets") -Recurse
 Copy-Item -LiteralPath (Join-Path $root "assets\dogs") -Destination (Join-Path $build "assets") -Recurse
