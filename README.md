@@ -38,7 +38,7 @@ after changing the manifest or scripts, rebuild with the command above, reload t
 
 ## load in vivaldi
 
-vivaldi can use the chrome manifest v3 build, but it does not let extensions control the new tab page until you enable it in settings.
+vivaldi can use the chrome manifest v3 build, but it does not let extensions control the new tab page until you enable it in settings. vivaldi also does not use the chrome-style homepage override from the extension manifest, so set the homepage URL manually after loading the extension.
 
 1. create the chrome build:
 
@@ -49,4 +49,8 @@ vivaldi can use the chrome manifest v3 build, but it does not let extensions con
 2. open `vivaldi://extensions`, enable developer mode, click `load unpacked`, and select `dist\chrome`.
 3. open `vivaldi://settings/tabs/`.
 4. under `new tab page`, keep `start page` selected and check `controlled by extension`.
-5. open a new tab.
+5. copy the extension id from the `new tab` card in `vivaldi://extensions`.
+6. open `vivaldi://settings/general/`.
+7. set `homepage` to `specific page` and use `chrome-extension://<extension-id>/newtab.html`.
+8. if vivaldi should open this page on launch, set `startup with` to `homepage`.
+9. open a new tab, click the home button, and restart vivaldi to confirm all three paths open the extension page.

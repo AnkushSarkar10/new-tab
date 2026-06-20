@@ -7,8 +7,10 @@
   const DEFAULT_IMAGE_TRANSITION_DURATION_MS = 1600;
   const MIN_IMAGE_TRANSITION_DURATION_MS = 200;
   const MAX_IMAGE_TRANSITION_DURATION_MS = 3000;
-  const MAX_QUICK_ACCESS_LINKS = 5;
+  const MAX_QUICK_ACCESS_LINKS = 6;
   const QUICK_ACCESS_LABEL_MAX_LENGTH = 32;
+  const QUICK_ACCESS_ICON_SIZE = 128;
+  const MIN_DETAILED_ICON_SIZE = 48;
   const DEFAULT_ALBUMS = globalThis.DEFAULT_ALBUMS;
   if (!Array.isArray(DEFAULT_ALBUMS) || DEFAULT_ALBUMS.length === 0) {
     throw new Error("Default albums failed to load.");
@@ -993,14 +995,70 @@
 
   function getQuickAccessIconSources(url) {
     try {
-      const origin = new URL(url).origin;
-      return [
-        new URL("/favicon.ico", origin).href,
-        new URL("/apple-touch-icon.png", origin).href
-      ];
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, "");
+      const encodedUrl = encodeURIComponent(parsedUrl.href);
+      const encodedHostname = encodeURIComponent(hostname);
+      const origin = parsedUrl.origin;
+      const sources = [];
+
+      if (isGmailUrl(hostname)) {
+        sources.push(
+          iconSource("https://www.gstatic.com/images/branding/product/2x/gmail_2020q4_96dp.png"),
+          iconSource("https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico")
+        );
+      }
+
+      if (isXUrl(hostname)) {
+        sources.push(iconSource(extensionAssetUrl("assets/icons/x.svg")));
+      }
+
+      sources.push(
+        iconSource(
+          `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodedUrl}&size=${QUICK_ACCESS_ICON_SIZE}`
+        ),
+        iconSource(`https://www.google.com/s2/favicons?domain_url=${encodedUrl}&sz=${QUICK_ACCESS_ICON_SIZE}`),
+        iconSource(`https://www.google.com/s2/favicons?domain=${encodedHostname}&sz=${QUICK_ACCESS_ICON_SIZE}`),
+        iconSource(new URL("/apple-touch-icon.png", origin).href),
+        iconSource(new URL("/apple-touch-icon-precomposed.png", origin).href),
+        iconSource(new URL("/favicon-96x96.png", origin).href),
+        iconSource(new URL("/favicon-64x64.png", origin).href),
+        iconSource(new URL("/favicon-32x32.png", origin).href, 0),
+        iconSource(new URL("/favicon.ico", origin).href, 0)
+      );
+
+      return dedupeIconSources(sources);
     } catch (error) {
       return [];
     }
+  }
+
+  function isGmailUrl(hostname) {
+    return hostname === "gmail.com" || hostname.endsWith(".gmail.com") || hostname === "mail.google.com";
+  }
+
+  function isXUrl(hostname) {
+    return hostname === "x.com" || hostname.endsWith(".x.com") || hostname === "twitter.com" || hostname.endsWith(".twitter.com");
+  }
+
+  function extensionAssetUrl(path) {
+    return browserApi?.runtime?.getURL ? browserApi.runtime.getURL(path) : path;
+  }
+
+  function iconSource(url, minSize = MIN_DETAILED_ICON_SIZE) {
+    return { url, minSize };
+  }
+
+  function dedupeIconSources(sources) {
+    const seen = new Set();
+    return sources.filter((source) => {
+      if (!source.url || seen.has(source.url)) {
+        return false;
+      }
+
+      seen.add(source.url);
+      return true;
+    });
   }
 
   function attachQuickAccessIcon(icon, fallbackTarget, link) {
@@ -1012,18 +1070,35 @@
 
     icon.referrerPolicy = "no-referrer";
     icon.dataset.iconIndex = "0";
-    icon.addEventListener("load", () => fallbackTarget.classList.remove("has-fallback"));
-    icon.addEventListener("error", () => {
-      const nextIndex = Number(icon.dataset.iconIndex || "0") + 1;
-      if (sources[nextIndex]) {
-        icon.dataset.iconIndex = String(nextIndex);
-        icon.src = sources[nextIndex];
+    icon.addEventListener("load", () => {
+      const currentSource = sources[Number(icon.dataset.iconIndex || "0")];
+      const isTooSmall =
+        currentSource &&
+        currentSource.minSize > 0 &&
+        (icon.naturalWidth < currentSource.minSize || icon.naturalHeight < currentSource.minSize);
+
+      if (isTooSmall && showNextQuickAccessIcon(icon, fallbackTarget, sources)) {
         return;
       }
 
-      fallbackTarget.classList.add("has-fallback");
+      fallbackTarget.classList.remove("has-fallback");
     });
-    icon.src = sources[0];
+    icon.addEventListener("error", () => {
+      showNextQuickAccessIcon(icon, fallbackTarget, sources);
+    });
+    icon.src = sources[0].url;
+  }
+
+  function showNextQuickAccessIcon(icon, fallbackTarget, sources) {
+    const nextIndex = Number(icon.dataset.iconIndex || "0") + 1;
+    if (sources[nextIndex]) {
+      icon.dataset.iconIndex = String(nextIndex);
+      icon.src = sources[nextIndex].url;
+      return true;
+    }
+
+    fallbackTarget.classList.add("has-fallback");
+    return false;
   }
 
   function getEditingAlbum() {
