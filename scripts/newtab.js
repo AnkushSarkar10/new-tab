@@ -56,7 +56,9 @@
     settingsButton: document.getElementById("settings-button"),
     closeSettingsButton: document.getElementById("close-settings-button"),
     settingsPanel: document.getElementById("settings-panel"),
+    dateTimeDisplay: document.getElementById("date-time-display"),
     autoPlayInput: document.getElementById("auto-play-input"),
+    showDateTimeInput: document.getElementById("show-date-time-input"),
     autoPlayIntervalField: document.getElementById("auto-play-interval-field"),
     autoPlayIntervalInput: document.getElementById("auto-play-interval-input"),
     websiteBackgroundUrlField: document.getElementById("website-background-url-field"),
@@ -82,6 +84,7 @@
   let activeImage = null;
   let editingAlbumId = null;
   let autoPlayTimerId = null;
+  let dateTimeTimerId = null;
   let visibleBackgroundIndex = 0;
   let imageLoadToken = 0;
   let albumDragState = null;
@@ -99,6 +102,7 @@
       showRandomImage();
     }
     syncAutoPlayTimer();
+    syncDateTimeDisplay();
   }
 
   function bindEvents() {
@@ -108,6 +112,7 @@
     elements.settingsButton.addEventListener("click", openSettings);
     elements.closeSettingsButton.addEventListener("click", closeSettings);
     elements.autoPlayInput.addEventListener("change", handleAutoPlayInput);
+    elements.showDateTimeInput.addEventListener("change", handleShowDateTimeInput);
     elements.autoPlayIntervalInput.addEventListener("change", handleAutoPlayIntervalInput);
     elements.websiteBackgroundUrlInput.addEventListener("input", handleWebsiteBackgroundUrlInput);
     elements.websiteBackgroundUrlInput.addEventListener("change", handleWebsiteBackgroundUrlInput);
@@ -236,6 +241,7 @@
     return {
       autoPlay: false,
       autoPlayIntervalSeconds: DEFAULT_AUTO_PLAY_INTERVAL_SECONDS,
+      showDateTime: true,
       websiteBackgroundUrl: "",
       imageTransitionDurationMs: DEFAULT_IMAGE_TRANSITION_DURATION_MS
     };
@@ -252,6 +258,8 @@
         Number.isFinite(interval) && interval >= MIN_AUTO_PLAY_INTERVAL_SECONDS
           ? Math.round(interval)
           : defaults.autoPlayIntervalSeconds,
+      showDateTime:
+        settings && typeof settings.showDateTime === "boolean" ? settings.showDateTime : defaults.showDateTime,
       websiteBackgroundUrl: normalizeWebsiteUrl(settings && settings.websiteBackgroundUrl),
       imageTransitionDurationMs:
         Number.isFinite(transitionDuration)
@@ -411,6 +419,44 @@
     autoPlayTimerId = setInterval(showRandomImage, state.settings.autoPlayIntervalSeconds * 1000);
   }
 
+  function syncDateTimeDisplay() {
+    if (dateTimeTimerId !== null) {
+      clearInterval(dateTimeTimerId);
+      dateTimeTimerId = null;
+    }
+
+    renderDateTimeDisplay();
+
+    if (!state.settings.showDateTime) {
+      return;
+    }
+
+    dateTimeTimerId = setInterval(renderDateTimeDisplay, 1000);
+  }
+
+  function renderDateTimeDisplay() {
+    const shouldShow = Boolean(state.settings.showDateTime);
+    elements.dateTimeDisplay.hidden = !shouldShow;
+    elements.dateTimeDisplay.setAttribute("aria-hidden", String(!shouldShow));
+
+    if (!shouldShow) {
+      elements.dateTimeDisplay.textContent = "";
+      elements.dateTimeDisplay.removeAttribute("datetime");
+      return;
+    }
+
+    const now = new Date();
+    elements.dateTimeDisplay.dateTime = now.toISOString();
+    elements.dateTimeDisplay.textContent = formatDateTime(now);
+  }
+
+  function formatDateTime(date) {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(date);
+  }
+
   function pickImage(album) {
     const previousId = state.lastImageByAlbum[album.id];
     const candidates = album.images.length > 1 ? album.images.filter((image) => image.id !== previousId) : album.images;
@@ -430,6 +476,7 @@
 
   function render() {
     renderHeader();
+    renderDateTimeDisplay();
     renderQuickAccess();
     renderAlbumMenu();
     renderSettings();
@@ -708,6 +755,7 @@
     }
     elements.autoPlayInput.checked = state.settings.autoPlay;
     elements.autoPlayInput.disabled = websiteActive;
+    elements.showDateTimeInput.checked = state.settings.showDateTime;
     elements.autoPlayIntervalInput.value = String(state.settings.autoPlayIntervalSeconds);
     elements.autoPlayIntervalInput.disabled = websiteActive || !state.settings.autoPlay;
     elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
@@ -758,6 +806,12 @@
     elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
     await saveState();
     syncAutoPlayTimer();
+  }
+
+  async function handleShowDateTimeInput(event) {
+    state.settings.showDateTime = event.target.checked;
+    await saveState();
+    syncDateTimeDisplay();
   }
 
   async function handleAutoPlayIntervalInput(event) {

@@ -87,6 +87,8 @@
         </form>
       </section>
 
+      <time id="date-time-display" class="date-time-display" aria-live="polite"></time>
+
       <aside id="settings-panel" class="settings-panel" aria-label="Settings" aria-hidden="true">
         <header class="panel-header">
           <h1>settings</h1>
@@ -112,6 +114,13 @@
               <small>show another image automatically</small>
             </span>
             <input id="auto-play-input" type="checkbox">
+          </label>
+          <label class="toggle-field">
+            <span>
+              <strong>show date and time</strong>
+              <small>display the current date and time</small>
+            </span>
+            <input id="show-date-time-input" type="checkbox">
           </label>
           <label id="auto-play-interval-field" class="field interval-field" hidden>
             <span>auto play interval (seconds)</span>
