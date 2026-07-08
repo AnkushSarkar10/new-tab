@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220">
+  <rect width="760" height="220" fill="#071312"/>
+  <style>
+    text { font-family: Inter, Segoe UI, Arial, sans-serif; fill: #dce7e2; }
+    .badge { fill: rgba(12, 18, 18, 0.78); stroke: rgba(255, 255, 255, 0.16); }
+    .icon { fill: none; stroke: #f7f4ef; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .temp { font-size: 20px; font-weight: 800; fill: #f7f4ef; }
+    .label { font-size: 13px; font-weight: 700; fill: rgba(247, 244, 239, 0.72); }
+  </style>
+
+  <text x="30" y="34" font-size="18" font-weight="800">Weather badge icon preview</text>
+
+  <g transform="translate(30 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(13 10)">
+      <circle cx="10" cy="10" r="4"/>
+      <path d="M10 0v2M10 18v2M0 10h2M18 10h2M3 3l1.4 1.4M15.6 15.6 17 17M3 17l1.4-1.4M15.6 4.4 17 3"/>
+    </g>
+    <text class="temp" x="42" y="27">85°</text>
+    <text class="label" x="0" y="66">sun</text>
+  </g>
+
+  <g transform="translate(152 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(12 12)">
+      <path d="M6 15h12a5 5 0 0 0 0-10 7 7 0 0 0-13-1A5.5 5.5 0 0 0 6 15Z"/>
+    </g>
+    <text class="temp" x="42" y="27">72°</text>
+    <text class="label" x="0" y="66">cloud</text>
+  </g>
+
+  <g transform="translate(274 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(11 8)">
+      <path d="M7 13h11a5 5 0 0 0 0-10 7 7 0 0 0-13-1A5.5 5.5 0 0 0 7 13Z"/>
+      <path d="M8 19v2M14 18v2M20 19v2"/>
+    </g>
+    <text class="temp" x="42" y="27">61°</text>
+    <text class="label" x="0" y="66">rain</text>
+  </g>
+
+  <g transform="translate(396 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(11 8)">
+      <path d="M7 13h11a5 5 0 0 0 0-10 7 7 0 0 0-13-1A5.5 5.5 0 0 0 7 13Z"/>
+      <path d="m13 14-3 6h5l-3 5"/>
+    </g>
+    <text class="temp" x="42" y="27">67°</text>
+    <text class="label" x="0" y="66">storm</text>
+  </g>
+
+  <g transform="translate(518 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(12 8)">
+      <path d="M7 13h11a5 5 0 0 0 0-10 7 7 0 0 0-13-1A5.5 5.5 0 0 0 7 13Z"/>
+      <path d="M8 20h12M10 17l8 6M18 17l-8 6"/>
+    </g>
+    <text class="temp" x="42" y="27">31°</text>
+    <text class="label" x="0" y="66">snow</text>
+  </g>
+
+  <g transform="translate(640 64)">
+    <rect class="badge" width="96" height="40" rx="8"/>
+    <g class="icon" transform="translate(13 9)">
+      <path d="M15.5 16.5A8 8 0 0 1 7.5 1a7 7 0 1 0 8 15.5Z"/>
+    </g>
+    <text class="temp" x="42" y="27">58°</text>
+    <text class="label" x="0" y="66">moon</text>
+  </g>
+
+  <text x="30" y="176" font-size="13" fill="rgba(247,244,239,0.66)">Current app uses the sun-style mark. These are matching line icons sized for the same 40px badge.</text>
+</svg>

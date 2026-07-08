@@ -350,6 +350,53 @@ button {
   display: none;
 }
 
+.temp-display {
+  position: absolute;
+  right: 16px;
+  bottom: 50px;
+  z-index: 4;
+  display: inline-flex;
+  min-width: 78px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(12, 12, 12, 0.38);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+  color: #f7f4ef;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+.temp-display[hidden] {
+  display: none;
+}
+
+.temp-display svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.temp-display span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .quick-access-inline-form input {
   width: 100%;
   height: 40px;
@@ -1079,5 +1126,10 @@ button {
 
   .settings-panel {
     padding: 14px;
+  }
+
+  .temp-display {
+    right: 10px;
+    bottom: 50px;
   }
 }

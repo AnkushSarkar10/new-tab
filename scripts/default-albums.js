@@ -3,6 +3,62 @@
 
   globalThis.DEFAULT_ALBUMS = [
     {
+      id: "cities",
+      name: "cities",
+      images: [
+        {
+          id: "cities-city-skyscrapers",
+          src: "assets/cities/city-skyscrapers.jpg",
+          label: "city-skyscrapers.jpg"
+        },
+        {
+          id: "cities-dubai-skyline",
+          src: "assets/cities/dubai-skyline.jpg",
+          label: "dubai-skyline.jpg"
+        },
+        {
+          id: "cities-hong-kong-harbor",
+          src: "assets/cities/hong-kong-harbor.jpg",
+          label: "hong-kong-harbor.jpg"
+        },
+        {
+          id: "cities-london-skyline",
+          src: "assets/cities/london-skyline.jpg",
+          label: "london-skyline.jpg"
+        },
+        {
+          id: "cities-new-york-skyline",
+          src: "assets/cities/new-york-skyline.jpg",
+          label: "new-york-skyline.jpg"
+        },
+        {
+          id: "cities-paris-eiffel-tower",
+          src: "assets/cities/paris-eiffel-tower.jpg",
+          label: "paris-eiffel-tower.jpg"
+        },
+        {
+          id: "cities-san-francisco-golden-gate",
+          src: "assets/cities/san-francisco-golden-gate.jpg",
+          label: "san-francisco-golden-gate.jpg"
+        },
+        {
+          id: "cities-singapore-marina-bay",
+          src: "assets/cities/singapore-marina-bay.jpg",
+          label: "singapore-marina-bay.jpg"
+        },
+        {
+          id: "cities-tokyo-city-night",
+          src: "assets/cities/tokyo-city-night.jpg",
+          label: "tokyo-city-night.jpg"
+        },
+        {
+          id: "cities-venice-canal",
+          src: "assets/cities/venice-canal.jpg",
+          label: "venice-canal.jpg"
+        }
+      ]
+    },
+    {
       id: "kanye",
       name: "kanye",
       images: [
@@ -270,62 +326,6 @@
           id: "dogs-happy-dog-field",
           src: "assets/dogs/happy-dog-field.jpg",
           label: "happy-dog-field.jpg"
-        }
-      ]
-    },
-    {
-      id: "cities",
-      name: "cities",
-      images: [
-        {
-          id: "cities-city-skyscrapers",
-          src: "assets/cities/city-skyscrapers.jpg",
-          label: "city-skyscrapers.jpg"
-        },
-        {
-          id: "cities-dubai-skyline",
-          src: "assets/cities/dubai-skyline.jpg",
-          label: "dubai-skyline.jpg"
-        },
-        {
-          id: "cities-hong-kong-harbor",
-          src: "assets/cities/hong-kong-harbor.jpg",
-          label: "hong-kong-harbor.jpg"
-        },
-        {
-          id: "cities-london-skyline",
-          src: "assets/cities/london-skyline.jpg",
-          label: "london-skyline.jpg"
-        },
-        {
-          id: "cities-new-york-skyline",
-          src: "assets/cities/new-york-skyline.jpg",
-          label: "new-york-skyline.jpg"
-        },
-        {
-          id: "cities-paris-eiffel-tower",
-          src: "assets/cities/paris-eiffel-tower.jpg",
-          label: "paris-eiffel-tower.jpg"
-        },
-        {
-          id: "cities-san-francisco-golden-gate",
-          src: "assets/cities/san-francisco-golden-gate.jpg",
-          label: "san-francisco-golden-gate.jpg"
-        },
-        {
-          id: "cities-singapore-marina-bay",
-          src: "assets/cities/singapore-marina-bay.jpg",
-          label: "singapore-marina-bay.jpg"
-        },
-        {
-          id: "cities-tokyo-city-night",
-          src: "assets/cities/tokyo-city-night.jpg",
-          label: "tokyo-city-night.jpg"
-        },
-        {
-          id: "cities-venice-canal",
-          src: "assets/cities/venice-canal.jpg",
-          label: "venice-canal.jpg"
         }
       ]
     }

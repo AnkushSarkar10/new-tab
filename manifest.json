@@ -3,7 +3,7 @@
   "name": "new tab",
   "version": "0.1.3",
   "description": "want a uniform clean experience when you open a new tab? new tab is your solution. available across all browsers.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage", "tabs", "geolocation", "https://api.open-meteo.com/*", "https://ipwho.is/*"],
   "background": {
     "scripts": ["scripts/startup.js"]
   },

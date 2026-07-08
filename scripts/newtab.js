@@ -11,6 +11,13 @@
   const QUICK_ACCESS_LABEL_MAX_LENGTH = 32;
   const QUICK_ACCESS_ICON_SIZE = 128;
   const MIN_DETAILED_ICON_SIZE = 48;
+  const TEMP_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+  const TEMP_CACHE_DURATION_MS = 60 * 60 * 1000;
+  const TEMP_FETCH_LOCK_MS = 30 * 1000;
+  const TEMP_FETCH_RECHECK_MS = 2500;
+  const TEMP_LOADING_TEXT = "...";
+  const TEMP_UNAVAILABLE_TEXT = "--°";
+  const IP_LOCATION_URL = "https://ipwho.is/";
   const DEFAULT_ALBUMS = globalThis.DEFAULT_ALBUMS;
   if (!Array.isArray(DEFAULT_ALBUMS) || DEFAULT_ALBUMS.length === 0) {
     throw new Error("Default albums failed to load.");
@@ -57,8 +64,11 @@
     closeSettingsButton: document.getElementById("close-settings-button"),
     settingsPanel: document.getElementById("settings-panel"),
     dateTimeDisplay: document.getElementById("date-time-display"),
+    tempDisplay: document.getElementById("temp-display"),
+    tempDisplayValue: document.getElementById("temp-display-value"),
     autoPlayInput: document.getElementById("auto-play-input"),
     showDateTimeInput: document.getElementById("show-date-time-input"),
+    showTempInput: document.getElementById("show-temp-input"),
     autoPlayIntervalField: document.getElementById("auto-play-interval-field"),
     autoPlayIntervalInput: document.getElementById("auto-play-interval-input"),
     websiteBackgroundUrlField: document.getElementById("website-background-url-field"),
@@ -85,6 +95,9 @@
   let editingAlbumId = null;
   let autoPlayTimerId = null;
   let dateTimeTimerId = null;
+  let tempTimerId = null;
+  let tempAbortController = null;
+  let tempRequestToken = 0;
   let visibleBackgroundIndex = 0;
   let imageLoadToken = 0;
   let albumDragState = null;
@@ -103,6 +116,7 @@
     }
     syncAutoPlayTimer();
     syncDateTimeDisplay();
+    syncTempDisplay();
   }
 
   function bindEvents() {
@@ -113,6 +127,7 @@
     elements.closeSettingsButton.addEventListener("click", closeSettings);
     elements.autoPlayInput.addEventListener("change", handleAutoPlayInput);
     elements.showDateTimeInput.addEventListener("change", handleShowDateTimeInput);
+    elements.showTempInput.addEventListener("change", handleShowTempInput);
     elements.autoPlayIntervalInput.addEventListener("change", handleAutoPlayIntervalInput);
     elements.websiteBackgroundUrlInput.addEventListener("input", handleWebsiteBackgroundUrlInput);
     elements.websiteBackgroundUrlInput.addEventListener("change", handleWebsiteBackgroundUrlInput);
@@ -242,6 +257,9 @@
       autoPlay: false,
       autoPlayIntervalSeconds: DEFAULT_AUTO_PLAY_INTERVAL_SECONDS,
       showDateTime: true,
+      showTemp: true,
+      lastTempText: "",
+      weatherCache: null,
       websiteBackgroundUrl: "",
       imageTransitionDurationMs: DEFAULT_IMAGE_TRANSITION_DURATION_MS
     };
@@ -260,6 +278,13 @@
           : defaults.autoPlayIntervalSeconds,
       showDateTime:
         settings && typeof settings.showDateTime === "boolean" ? settings.showDateTime : defaults.showDateTime,
+      showTemp:
+        settings && typeof settings.showTemp === "boolean" ? settings.showTemp : defaults.showTemp,
+      lastTempText:
+        settings && typeof settings.lastTempText === "string" && isValidTempText(settings.lastTempText)
+          ? settings.lastTempText
+          : defaults.lastTempText,
+      weatherCache: normalizeWeatherCache(settings && settings.weatherCache),
       websiteBackgroundUrl: normalizeWebsiteUrl(settings && settings.websiteBackgroundUrl),
       imageTransitionDurationMs:
         Number.isFinite(transitionDuration)
@@ -450,6 +475,287 @@
     elements.dateTimeDisplay.textContent = formatDateTime(now);
   }
 
+  function syncTempDisplay() {
+    if (tempTimerId !== null) {
+      clearInterval(tempTimerId);
+      tempTimerId = null;
+    }
+
+    renderTempDisplay();
+
+    if (!state.settings.showTemp) {
+      abortTempRequest();
+      return;
+    }
+
+    updateTempDisplay();
+    tempTimerId = setInterval(updateTempDisplay, TEMP_REFRESH_INTERVAL_MS);
+  }
+
+  function renderTempDisplay() {
+    const shouldShow = Boolean(state.settings.showTemp);
+    elements.tempDisplay.hidden = !shouldShow;
+    elements.tempDisplay.setAttribute("aria-hidden", String(!shouldShow));
+
+    if (!shouldShow) {
+      elements.tempDisplayValue.textContent = "";
+      elements.tempDisplay.title = "";
+      return;
+    }
+
+    if (!elements.tempDisplayValue.textContent) {
+      elements.tempDisplayValue.textContent = state.settings.lastTempText || TEMP_LOADING_TEXT;
+      elements.tempDisplay.title = state.settings.lastTempText
+        ? "Current temperature"
+        : "Loading current temperature";
+    }
+  }
+
+  async function updateTempDisplay() {
+    if (!state.settings.showTemp) {
+      showUnavailableTemp();
+      return;
+    }
+
+    let token = 0;
+    try {
+      abortTempRequest();
+      token = ++tempRequestToken;
+      showLoadingTemp();
+
+      const cachedWeather = await getLatestWeatherCache();
+      if (cachedWeather && isFreshWeatherCache(cachedWeather)) {
+        showCachedTemp(cachedWeather, "Current temperature");
+        return;
+      }
+
+      if (await isAnotherWeatherFetchInProgress()) {
+        window.setTimeout(() => {
+          if (state.settings.showTemp) {
+            updateTempDisplay();
+          }
+        }, TEMP_FETCH_RECHECK_MS);
+        return;
+      }
+
+      await markWeatherFetchStarted();
+      const abortController = new AbortController();
+      tempAbortController = abortController;
+      const coords = await getWeatherCoords(abortController.signal);
+      if (token !== tempRequestToken || !state.settings.showTemp) {
+        return;
+      }
+
+      const temp = await fetchCurrentTemp(coords, abortController.signal);
+      if (token !== tempRequestToken || !state.settings.showTemp) {
+        return;
+      }
+
+      const tempText = `${Math.round(temp)}°`;
+      elements.tempDisplayValue.textContent = tempText;
+      elements.tempDisplay.title = "Current temperature";
+      state.settings.lastTempText = tempText;
+      state.settings.weatherCache = {
+        tempText,
+        updatedAt: Date.now(),
+        fetchStartedAt: 0
+      };
+      await saveState();
+      renderTempDisplay();
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        await clearWeatherFetchStarted();
+        showUnavailableTemp();
+      }
+    } finally {
+      if (token === tempRequestToken) {
+        tempAbortController = null;
+      }
+    }
+  }
+
+  function showLoadingTemp() {
+    if (state.settings.lastTempText) {
+      elements.tempDisplayValue.textContent = state.settings.lastTempText;
+      elements.tempDisplay.title = "Updating current temperature";
+    } else {
+      elements.tempDisplayValue.textContent = TEMP_LOADING_TEXT;
+      elements.tempDisplay.title = "Loading current temperature";
+    }
+
+    renderTempDisplay();
+  }
+
+  function showCachedTemp(cache, title) {
+    elements.tempDisplayValue.textContent = cache.tempText;
+    elements.tempDisplay.title = title;
+    state.settings.lastTempText = cache.tempText;
+    state.settings.weatherCache = cache;
+    renderTempDisplay();
+  }
+
+  function showUnavailableTemp() {
+    elements.tempDisplayValue.textContent = state.settings.lastTempText || TEMP_UNAVAILABLE_TEXT;
+    elements.tempDisplay.title = state.settings.lastTempText
+      ? "Last known temperature"
+      : "Allow location access to show temperature";
+    renderTempDisplay();
+  }
+
+  function abortTempRequest() {
+    tempRequestToken += 1;
+    if (tempAbortController) {
+      tempAbortController.abort();
+      tempAbortController = null;
+    }
+  }
+
+  function getCurrentPosition() {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        maximumAge: TEMP_REFRESH_INTERVAL_MS,
+        timeout: 10000
+      });
+    });
+  }
+
+  async function getWeatherCoords(signal) {
+    if (navigator.geolocation) {
+      try {
+        const position = await getCurrentPosition();
+        return normalizeCoords(position.coords);
+      } catch (error) {
+        // Fall back to approximate IP location when browser location is denied or unavailable.
+      }
+    }
+
+    return fetchApproximateCoords(signal);
+  }
+
+  async function fetchApproximateCoords(signal) {
+    const response = await fetch(IP_LOCATION_URL, {
+      cache: "no-store",
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to fetch approximate location.");
+    }
+
+    const data = await response.json();
+    return normalizeCoords(data);
+  }
+
+  function normalizeCoords(coords) {
+    const latitude = Number(coords && coords.latitude);
+    const longitude = Number(coords && coords.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new Error("Location response did not include coordinates.");
+    }
+
+    return { latitude, longitude };
+  }
+
+  async function getLatestWeatherCache() {
+    const latestState = await loadState();
+    const cache = normalizeWeatherCache(latestState && latestState.settings && latestState.settings.weatherCache);
+    if (cache && cache.tempText) {
+      state.settings.weatherCache = cache;
+      state.settings.lastTempText = cache.tempText;
+    }
+
+    return cache;
+  }
+
+  function isFreshWeatherCache(cache) {
+    return cache && cache.tempText && Date.now() - cache.updatedAt < TEMP_CACHE_DURATION_MS;
+  }
+
+  async function isAnotherWeatherFetchInProgress() {
+    const cache = await getLatestWeatherCache();
+    return Boolean(cache && cache.fetchStartedAt && Date.now() - cache.fetchStartedAt < TEMP_FETCH_LOCK_MS);
+  }
+
+  async function markWeatherFetchStarted() {
+    const cache = (await getLatestWeatherCache()) || {};
+    state.settings.weatherCache = {
+      ...cache,
+      fetchStartedAt: Date.now()
+    };
+    await saveState();
+  }
+
+  async function clearWeatherFetchStarted() {
+    const cache = (await getLatestWeatherCache()) || state.settings.weatherCache;
+    if (!cache || !cache.fetchStartedAt) {
+      return;
+    }
+
+    state.settings.weatherCache = {
+      ...cache,
+      fetchStartedAt: 0
+    };
+    await saveState();
+  }
+
+  async function fetchCurrentTemp(coords, signal) {
+    const unit = shouldUseFahrenheit() ? "fahrenheit" : "celsius";
+    const params = new URLSearchParams({
+      latitude: coords.latitude.toFixed(4),
+      longitude: coords.longitude.toFixed(4),
+      current_weather: "true",
+      temperature_unit: unit
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal });
+
+    if (!response.ok) {
+      throw new Error("Unable to fetch temperature.");
+    }
+
+    const data = await response.json();
+    const temp = Number(
+      data && data.current && Number.isFinite(Number(data.current.temperature_2m))
+        ? data.current.temperature_2m
+        : data && data.current_weather && data.current_weather.temperature
+    );
+    if (!Number.isFinite(temp)) {
+      throw new Error("Weather response did not include a temperature.");
+    }
+
+    return temp;
+  }
+
+  function shouldUseFahrenheit() {
+    try {
+      const locale = new Intl.Locale(navigator.language || Intl.DateTimeFormat().resolvedOptions().locale);
+      return ["US", "BS", "BZ", "KY", "PW", "FM", "MH", "LR"].includes(locale.region);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function isValidTempText(value) {
+    return /^-?\d{1,3}°$/.test(value);
+  }
+
+  function normalizeWeatherCache(cache) {
+    if (!cache || typeof cache !== "object") {
+      return null;
+    }
+
+    const tempText = isValidTempText(cache.tempText) ? cache.tempText : "";
+    const updatedAt = Number(cache.updatedAt);
+    const fetchStartedAt = Number(cache.fetchStartedAt);
+
+    return {
+      tempText,
+      updatedAt: tempText && Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
+      fetchStartedAt: Number.isFinite(fetchStartedAt) && fetchStartedAt > 0 ? fetchStartedAt : 0
+    };
+  }
+
   function formatDateTime(date) {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
@@ -477,6 +783,7 @@
   function render() {
     renderHeader();
     renderDateTimeDisplay();
+    renderTempDisplay();
     renderQuickAccess();
     renderAlbumMenu();
     renderSettings();
@@ -756,6 +1063,7 @@
     elements.autoPlayInput.checked = state.settings.autoPlay;
     elements.autoPlayInput.disabled = websiteActive;
     elements.showDateTimeInput.checked = state.settings.showDateTime;
+    elements.showTempInput.checked = state.settings.showTemp;
     elements.autoPlayIntervalInput.value = String(state.settings.autoPlayIntervalSeconds);
     elements.autoPlayIntervalInput.disabled = websiteActive || !state.settings.autoPlay;
     elements.autoPlayIntervalField.hidden = !state.settings.autoPlay;
@@ -812,6 +1120,12 @@
     state.settings.showDateTime = event.target.checked;
     await saveState();
     syncDateTimeDisplay();
+  }
+
+  async function handleShowTempInput(event) {
+    state.settings.showTemp = event.target.checked;
+    await saveState();
+    syncTempDisplay();
   }
 
   async function handleAutoPlayIntervalInput(event) {

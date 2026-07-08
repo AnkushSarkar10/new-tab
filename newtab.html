@@ -88,6 +88,20 @@
       </section>
 
       <time id="date-time-display" class="date-time-display" aria-live="polite"></time>
+      <div id="temp-display" class="temp-display" aria-live="polite" aria-hidden="true" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+        <span id="temp-display-value"></span>
+      </div>
 
       <aside id="settings-panel" class="settings-panel" aria-label="Settings" aria-hidden="true">
         <header class="panel-header">
@@ -121,6 +135,13 @@
               <small>display the current date and time</small>
             </span>
             <input id="show-date-time-input" type="checkbox">
+          </label>
+          <label class="toggle-field">
+            <span>
+              <strong>show temp</strong>
+              <small>display the current local temperature</small>
+            </span>
+            <input id="show-temp-input" type="checkbox">
           </label>
           <label id="auto-play-interval-field" class="field interval-field" hidden>
             <span>auto play interval (seconds)</span>
